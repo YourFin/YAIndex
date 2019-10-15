@@ -19,13 +19,9 @@ COPY Gemfile ${APP_PATH}/Gemfile
 WORKDIR ${APP_PATH}
 RUN bundle install
 
-#COPY package.json ${APP_PATH}/package.json
-#COPY yarn.lock ${APP_PATH}/yarn.lock
-#COPY .yarnrc ${APP_PATH}/.yarnrc
-#COPY Rakefile ${APP_PATH}/Rakefile
-#COPY bin ${APP_PATH}/bin
-#COPY config ${APP_PATH}/config
-#RUN bundle exec rake webpacker:install
+COPY package.json ${APP_PATH}/package.json
+COPY yarn.lock ${APP_PATH}/yarn.lock
+RUN yarn install --check-files
 #RUN yarn upgrade
 
 # Copy application files
