@@ -15,14 +15,13 @@ ENV APP_PATH=/app
 # Install gems
 RUN mkdir -p $APP_PATH
 COPY Gemfile ${APP_PATH}/Gemfile
-#COPY Gemfile.lock ${APP_PATH}/Gemfile.lock
+COPY Gemfile.lock ${APP_PATH}/Gemfile.lock
 WORKDIR ${APP_PATH}
 RUN bundle install
 
 COPY package.json ${APP_PATH}/package.json
 COPY yarn.lock ${APP_PATH}/yarn.lock
 RUN yarn install --check-files
-#RUN yarn upgrade
 
 # Copy application files
 COPY . ${APP_PATH}
