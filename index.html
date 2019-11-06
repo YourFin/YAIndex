@@ -6112,27 +6112,72 @@ var author$project$Routing$show = function (route) {
 			return 'PageNotFoundRoute';
 	}
 };
-var elm$html$Html$h1 = _VirtualDom_node('h1');
+var author$project$Routing$toUrlString = function (route) {
+	switch (route.$) {
+		case 'RootRoute':
+			return '';
+		case 'SearchResultsRoute':
+			var query = route.a;
+			return 'search?q=' + A2(elm$core$Maybe$withDefault, '', query);
+		case 'ContentRoute':
+			var contentId = route.a;
+			return 'c/' + contentId;
+		default:
+			return '404.html';
+	}
+};
+var elm$html$Html$a = _VirtualDom_node('a');
+var elm$html$Html$li = _VirtualDom_node('li');
 var elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
 var elm$html$Html$text = elm$virtual_dom$VirtualDom$text;
-var elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
-var elm$html$Html$Attributes$style = elm$virtual_dom$VirtualDom$style;
+var elm$json$Json$Encode$string = _Json_wrap;
+var elm$html$Html$Attributes$stringProperty = F2(
+	function (key, string) {
+		return A2(
+			_VirtualDom_property,
+			key,
+			elm$json$Json$Encode$string(string));
+	});
+var elm$html$Html$Attributes$href = function (url) {
+	return A2(
+		elm$html$Html$Attributes$stringProperty,
+		'href',
+		_VirtualDom_noJavaScriptUri(url));
+};
+var author$project$Routing$toLink = F2(
+	function (route, text) {
+		return A2(
+			elm$html$Html$li,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2(
+					elm$html$Html$a,
+					_List_fromArray(
+						[
+							elm$html$Html$Attributes$href(
+							author$project$Routing$toUrlString(route))
+						]),
+					_List_fromArray(
+						[
+							elm$html$Html$text(text)
+						]))
+				]));
+	});
+var elm$html$Html$h2 = _VirtualDom_node('h2');
 var author$project$Main$view = function (model) {
 	return {
 		body: _List_fromArray(
 			[
 				A2(
-				elm$html$Html$h1,
-				_List_fromArray(
-					[
-						A2(elm$html$Html$Attributes$style, 'display', 'flex'),
-						A2(elm$html$Html$Attributes$style, 'justify-content', 'center')
-					]),
+				elm$html$Html$h2,
+				_List_Nil,
 				_List_fromArray(
 					[
 						elm$html$Html$text(
 						'Hello Elm! You are at: ' + author$project$Routing$show(model.route))
-					]))
+					])),
+				A2(author$project$Routing$toLink, author$project$Routing$RootRoute, 'Home')
 			]),
 		title: 'Browser'
 	};

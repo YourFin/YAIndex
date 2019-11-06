@@ -2,7 +2,7 @@ module Main exposing (..)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav
-import Html exposing (Html, h1, text)
+import Html exposing (..)
 import Html.Attributes exposing (style)
 import Routing
 import Url
@@ -37,8 +37,9 @@ view model =
     -- avoid loading additional resources. Use a proper stylesheet when building your own app.
     { title = "Browser"
     , body =
-        [ h1 [ style "display" "flex", style "justify-content" "center" ]
+        [ h2 []
             [ text ("Hello Elm! You are at: " ++ Routing.show model.route) ]
+        , Routing.toLink Routing.RootRoute "Home"
         ]
     }
 
