@@ -1,4 +1,4 @@
-module Routing exposing (Route(..), parseUrl, show, toLink, toUrlString)
+module Routing exposing (Route(..), parseUrl, show, toHref, toLink, toUrlString)
 
 import Html exposing (Html)
 import Html.Attributes
@@ -55,13 +55,16 @@ toUrlString route =
             "/404.html"
 
 
+toHref : Route -> Html.Attribute msg
+toHref route =
+    Html.Attributes.href (toUrlString route)
+
+
 toLink : Route -> String -> Html msg
 toLink route text =
-    Html.li []
-        [ Html.a
-            [ Html.Attributes.href (toUrlString route) ]
-            [ Html.text text ]
-        ]
+    Html.a
+        [ Html.Attributes.href (toUrlString route) ]
+        [ Html.text text ]
 
 
 
