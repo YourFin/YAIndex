@@ -26,6 +26,9 @@ RUN yarn install --check-files
 # Copy application files
 COPY . ${APP_PATH}
 
+# Attempt to build elm packages to pull in dependencies
+RUN bash -c "yarn run elm make /app/javascript/Main.elm --output=/dev/null 2>/dev/null || true"
+
 COPY bin/entrypoint.sh /usr/bin
 RUN chmod +x /usr/bin/entrypoint.sh
 ENTRYPOINT ["entrypoint.sh"]
