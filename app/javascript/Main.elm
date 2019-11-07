@@ -3,7 +3,7 @@ module Main exposing (..)
 import Browser exposing (Document)
 import Browser.Navigation as Nav
 import Html exposing (..)
-import Html.Attributes exposing (style)
+import Html.Attributes exposing (class, style)
 import MiscView
 import Routing
 import Url
@@ -39,9 +39,20 @@ view model =
     { title = "Browser"
     , body =
         [ MiscView.navbar
-        , h2 []
-            [ text ("Hello Elm! You are at: " ++ Routing.show model.route) ]
-        , Routing.toLink Routing.RootRoute "Home"
+        , section [ class "hero is-primary is-fullheight" ]
+            [ div [ class "hero-body" ]
+                [ div [ class "container" ]
+                    [ div [ class "columns is-centered" ]
+                        [ div [ class "column is-5-tablet is-4-desktop is-3-widescreen" ]
+                            [ form [ class "box" ]
+                                [ text ("Hello Elm! You are at: " ++ Routing.show model.route)
+                                , Routing.toLink Routing.RootRoute "Home"
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
         ]
     }
 
