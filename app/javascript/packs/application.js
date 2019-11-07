@@ -11,6 +11,7 @@
 import {
     Elm
 } from '../Main';
+import '../styles/main.scss';
 
 document.addEventListener('DOMContentLoaded', () => {
     Elm.Main.init();
