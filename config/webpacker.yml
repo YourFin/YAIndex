@@ -53,6 +53,10 @@ development:
   <<: *default
   compile: true
 
+  # Show webpack compile output in rails logs
+  # See: https://github.com/rails/webpacker/blob/master/lib/webpacker/configuration.rb
+  webpack_compile_output: true
+
   # Verifies that correct packages and versions are installed by inspecting package.json, yarn.lock, and node_modules
   check_yarn_integrity: true
 
