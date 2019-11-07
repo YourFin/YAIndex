@@ -44,6 +44,19 @@ view model =
                 [ div [ class "container" ]
                     [ div [ class "columns is-centered" ]
                         [ div [ class "column is-5-tablet is-4-desktop is-3-widescreen" ]
+                            [ label [ class "label" ] [ text "email" ]
+                            , div [ class "control has-icons-left" ]
+                                [ input
+                                    [ class "input"
+                                    , Html.Attributes.type_ "email"
+                                    , Html.Attributes.placeholder "foo@bar.com"
+                                    ]
+                                    []
+                                , span [ class "icon is-small is-left" ]
+                                    [ i [ class "fa fa-envelope" ] [] ]
+                                ]
+                            ]
+                        , div [ class "column" ]
                             [ form [ class "box" ]
                                 [ text ("Hello Elm! You are at: " ++ Routing.show model.route)
                                 , Routing.toLink Routing.RootRoute "Home"
