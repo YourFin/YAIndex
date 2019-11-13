@@ -5,7 +5,8 @@ import Browser.Navigation as Nav
 import Html exposing (..)
 import Html.Attributes exposing (class, style)
 import MiscView
-import Routing
+import Pages.Login exposing (loginView)
+import Routing exposing (Route(..))
 import Url
 
 
@@ -16,6 +17,7 @@ import Url
 type alias Model =
     { key : Nav.Key
     , route : Routing.Route
+    , loggedIn : Bool
     }
 
 
@@ -25,7 +27,12 @@ type alias Model =
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Message )
 init flags url key =
-    ( { key = key, route = Routing.parseUrl url }, Cmd.none )
+    ( { key = key
+      , route = Routing.parseUrl url
+      , loggedIn = True
+      }
+    , Cmd.none
+    )
 
 
 
@@ -36,36 +43,32 @@ view : Model -> Document Message
 view model =
     -- The inline style is being used for example purposes in order to keep this example simple and
     -- avoid loading additional resources. Use a proper stylesheet when building your own app.
+    let
+        route =
+            model.route
+    in
     { title = "Browser"
     , body =
         [ MiscView.navbar
-        , section [ class "hero is-primary is-fullheight" ]
-            [ div [ class "hero-body" ]
-                [ div [ class "container" ]
-                    [ div [ class "columns is-centered" ]
-                        [ div [ class "column is-5-tablet is-4-desktop is-3-widescreen" ]
-                            [ label [ class "label" ] [ text "email" ]
-                            , div [ class "control has-icons-left" ]
-                                [ input
-                                    [ class "input"
-                                    , Html.Attributes.type_ "email"
-                                    , Html.Attributes.placeholder "foo@bar.com"
-                                    ]
+        , case route of
+            LoginRoute redirect ->
+                loginView redirect
+
+            _ ->
+                section [ class "hero is-primary is-fullheight" ]
+                    [ div [ class "hero-body" ]
+                        [ div [ class "container" ]
+                            [ div [ class "columns is-centered" ]
+                                [ div [ class "column is-5-tablet is-4-desktop is-3-widescreen" ]
                                     []
-                                , span [ class "icon is-small is-left" ]
-                                    [ i [ class "fas fa-envelope" ] [] ]
-                                ]
-                            ]
-                        , div [ class "column" ]
-                            [ form [ class "box" ]
-                                [ text ("Hello Elm! You are at: " ++ Routing.show model.route)
-                                , Routing.toLink Routing.RootRoute "Home"
+                                , div [ class "column" ]
+                                    [ text ("Hello Elm! You are at: " ++ Routing.show model.route)
+                                    , Routing.toLink Routing.RootRoute "Home"
+                                    ]
                                 ]
                             ]
                         ]
                     ]
-                ]
-            ]
         ]
     }
 
