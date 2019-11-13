@@ -53,7 +53,7 @@ view model =
                                     ]
                                     []
                                 , span [ class "icon is-small is-left" ]
-                                    [ i [ class "fa fa-envelope" ] [] ]
+                                    [ i [ class "fas fa-envelope" ] [] ]
                                 ]
                             ]
                         , div [ class "column" ]
