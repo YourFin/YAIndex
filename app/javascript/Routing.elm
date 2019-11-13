@@ -19,7 +19,7 @@ type Route
     | SearchResultsRoute (Maybe String)
     | ContentRoute ContentId
     | PageNotFoundRoute
-    | LoginRoute (Maybe Route)
+    | LoginRoute Route
 
 
 show : Route -> String
@@ -37,13 +37,8 @@ show route =
         PageNotFoundRoute ->
             "PageNotFoundRoute"
 
-        LoginRoute possibleSubRoute ->
-            case possibleSubRoute of
-                Maybe.Nothing ->
-                    "LoginRoute"
-
-                Maybe.Just subRoute ->
-                    "LoginRoute for subroute: " ++ show subRoute
+        LoginRoute redirRoute ->
+            "LoginRoute redirecting to: " ++ show redirRoute
 
 
 
@@ -70,20 +65,18 @@ toUrlString route =
         PageNotFoundRoute ->
             Url.Builder.absolute [ "404" ] []
 
-        LoginRoute possibleSubRoute ->
-            case possibleSubRoute of
-                Maybe.Nothing ->
+        LoginRoute redirRoute ->
+            case redirRoute of
+                RootRoute ->
                     Url.Builder.absolute [ "login" ] []
 
-                Maybe.Just subRoute ->
-                    case subRoute of
-                        LoginRoute _ ->
-                            toUrlString subRoute
+                LoginRoute _ ->
+                    toUrlString redirRoute
 
-                        finalRedirRoute ->
-                            Url.Builder.absolute
-                                [ "login" ]
-                                [ Url.Builder.string "redir" (toUrlString finalRedirRoute) ]
+                _ ->
+                    Url.Builder.absolute
+                        [ "login" ]
+                        [ Url.Builder.string "redir" (toUrlString redirRoute) ]
 
 
 toHref : Route -> Html.Attribute msg
@@ -102,16 +95,20 @@ toLink route text =
 ---- PARSING
 
 
-redirQuery : Query.Parser (Maybe Route)
+redirQuery : Query.Parser Route
 redirQuery =
     Query.custom "redir" <|
         \stringList ->
             case stringList of
                 [ str ] ->
-                    Maybe.map parseUrl <| Url.fromString ("http://does-not-matter" ++ str)
+                    "http://does-not-matter"
+                        ++ str
+                        |> Url.fromString
+                        |> Maybe.map parseUrl
+                        |> Maybe.withDefault RootRoute
 
                 _ ->
-                    Maybe.Nothing
+                    RootRoute
 
 
 matchers : Parser (Route -> a) a
