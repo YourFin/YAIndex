@@ -2,8 +2,10 @@ module Routing exposing (Route(..), parseUrl, show, toHref, toLink, toUrlString)
 
 import Html exposing (Html)
 import Html.Attributes
+import List
 import Maybe exposing (Maybe)
 import Url exposing (Url)
+import Url.Builder
 import Url.Parser exposing ((</>), (<?>), Parser, map, oneOf, s, string, top)
 import Url.Parser.Query as Query
 
@@ -17,6 +19,7 @@ type Route
     | SearchResultsRoute (Maybe String)
     | ContentRoute ContentId
     | PageNotFoundRoute
+    | LoginRoute (Maybe Route)
 
 
 show : Route -> String
@@ -34,6 +37,14 @@ show route =
         PageNotFoundRoute ->
             "PageNotFoundRoute"
 
+        LoginRoute possibleSubRoute ->
+            case possibleSubRoute of
+                Maybe.Nothing ->
+                    "LoginRoute"
+
+                Maybe.Just subRoute ->
+                    "LoginRoute for subroute: " ++ show subRoute
+
 
 
 ---- EXPORT
@@ -43,16 +54,36 @@ toUrlString : Route -> String
 toUrlString route =
     case route of
         RootRoute ->
-            "/"
+            Url.Builder.absolute [] []
 
-        SearchResultsRoute query ->
-            "/search?q=" ++ Maybe.withDefault "" query
+        SearchResultsRoute possibleQuery ->
+            case possibleQuery of
+                Maybe.Just query ->
+                    Url.Builder.absolute [ "search" ] [ Url.Builder.string "q" query ]
+
+                Maybe.Nothing ->
+                    Url.Builder.absolute [ "search" ] []
 
         ContentRoute contentId ->
-            "/c/" ++ contentId
+            Url.Builder.absolute [ "c", contentId ] []
 
         PageNotFoundRoute ->
-            "/404.html"
+            Url.Builder.absolute [ "404" ] []
+
+        LoginRoute possibleSubRoute ->
+            case possibleSubRoute of
+                Maybe.Nothing ->
+                    Url.Builder.absolute [ "login" ] []
+
+                Maybe.Just subRoute ->
+                    case subRoute of
+                        LoginRoute _ ->
+                            toUrlString subRoute
+
+                        finalRedirRoute ->
+                            Url.Builder.absolute
+                                [ "login" ]
+                                [ Url.Builder.string "redir" (toUrlString finalRedirRoute) ]
 
 
 toHref : Route -> Html.Attribute msg
@@ -71,6 +102,18 @@ toLink route text =
 ---- PARSING
 
 
+redirQuery : Query.Parser (Maybe Route)
+redirQuery =
+    Query.custom "redir" <|
+        \stringList ->
+            case stringList of
+                [ str ] ->
+                    Maybe.map parseUrl <| Url.fromString ("http://does-not-matter" ++ str)
+
+                _ ->
+                    Maybe.Nothing
+
+
 matchers : Parser (Route -> a) a
 matchers =
     oneOf
@@ -78,6 +121,7 @@ matchers =
         , map SearchResultsRoute (s "search" <?> Query.string "q")
         , map ContentRoute (s "c" </> string)
         , map PageNotFoundRoute (s "404.html")
+        , map LoginRoute (s "login" <?> redirQuery)
         ]
 
 
