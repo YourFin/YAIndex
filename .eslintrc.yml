@@ -1,0 +1,60 @@
+env:
+  browser: true
+  es6: true
+extends: 'eslint:recommended'
+globals:
+  Atomics: readonly
+  SharedArrayBuffer: readonly
+parserOptions:
+  ecmaVersion: 2018
+  sourceType: module
+rules:
+  indent:
+    - error
+    - 2
+  linebreak-style:
+    - error
+    - unix
+  eol-last:
+    - error
+  quotes:
+    - error
+    - single
+  brace-style:
+    - error
+    - 1tbs
+  semi:
+    - error
+    - always
+  keyword-spacing:
+    - error
+    - before: true
+      after: true
+  no-unused-vars:
+    - error
+    - vars: local
+      argsIgnorePattern: "^_+$" # The only allowed unused argument names are _, __, ___, ...
+  no-import-assign:
+    - error
+  eqeqeq:
+    - warn
+  curly:
+    - error
+    - all
+  no-trailing-spaces:
+    - error
+  no-duplicate-imports:
+    - error
+  no-var:
+    - error
+  space-before-blocks:
+    - error
+    - always
+  prefer-const:
+    - warn
+  prefer-arrow-callback:
+    - warn
+  prefer-template:
+    - warn
+  no-warning-comments:
+    - warn
