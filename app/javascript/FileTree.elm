@@ -1,14 +1,14 @@
 module FileTree exposing (FileNode(..), fileNodeDecoder)
 
-import Json.Decode as Decode exposing (Decoder, field, int, lazy, list, map, map3, oneOf, string)
+import Json.Decode as Decode exposing (Decoder, field, int, lazy, list, map, map3, map4, oneOf, string, succeed)
 import Time
-
 
 type FileNode
     = Folder
         { modified : Time.Posix
         , name : String
         , children : List FileNode
+        , expanded : Bool
         }
     | File
         { modified : Time.Posix
@@ -21,6 +21,7 @@ type alias FolderAlias =
     { modified : Time.Posix
     , name : String
     , children : List FileNode
+    , expanded : Bool
     }
 
 
@@ -34,10 +35,11 @@ type alias FileAlias =
 folderDecoder : Decoder FileNode
 folderDecoder =
     map Folder <|
-        map3 FolderAlias
+        map4 FolderAlias
             (map Time.millisToPosix <| field "modified" int)
             (field "name" string)
             (field "children" (list <| lazy (\_ -> fileNodeDecoder)))
+            (succeed False)
 
 
 fileDecoder : Decoder FileNode
