@@ -1,4 +1,4 @@
-module FileTree exposing (FileNode(..), fileNodeDecoder)
+module FileTree exposing (FileNode(..), filesDecoder)
 
 import Json.Decode as Decode exposing (Decoder, field, int, lazy, list, map, map3, map4, oneOf, string, succeed)
 import Time
@@ -54,3 +54,7 @@ fileDecoder =
 fileNodeDecoder : Decoder FileNode
 fileNodeDecoder =
     oneOf [ folderDecoder, fileDecoder ]
+
+filesDecoder : Decoder (List FileNode)
+filesDecoder =
+    list fileNodeDecoder
