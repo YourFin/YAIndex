@@ -9,7 +9,10 @@ class FilesController < ApiController
     uncleaned_path = build_system_path(path_str)
     raise ApiError::Forbidden.new unless verify_path_in_scope(uncleaned_path)
     cleaned_path = uncleaned_path.realpath
-    return build_directory_tree(cleaned_path)[:children]
+    return_val = build_directory_tree(cleaned_path)
+    return_val[:name] = ""
+    return_val[:modified] = 0
+    return return_val
   end
 
   def build_system_path(request_path_str)
@@ -51,7 +54,11 @@ class FilesController < ApiController
         :modified => path.stat.ctime.to_i * MILLISECONDS_PER_SECOND,
         :children => Dir.glob(path + "*").map { |path_str|
           build_directory_tree(Pathname.new(path_str))
-        }.compact
+        }.compact.reduce({}) { |memo, entry|
+          name = entry.delete(:name)
+          memo[name] = entry
+          memo
+        }
       }
     else # Ignore symlinks, hardlinks, etc.
       return nil

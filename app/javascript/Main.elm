@@ -2,10 +2,15 @@ module Main exposing (..)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav
+import Dict
+import FileTree exposing (FileNode(..))
 import Html exposing (..)
 import Html.Attributes exposing (class, style)
+import Http
+import List
 import MiscView
 import Pages.Login exposing (loginView)
+import Result exposing (Result(..))
 import Routing exposing (Route(..))
 import Url
 
@@ -14,10 +19,17 @@ import Url
 -- MODEL
 
 
+type FilesState
+    = Loading
+    | FilesError
+    | Success FileTree.FileNode
+
+
 type alias Model =
     { key : Nav.Key
     , route : Routing.Route
     , loggedIn : Bool
+    , filesState : FilesState
     }
 
 
@@ -30,8 +42,12 @@ init flags url key =
     ( { key = key
       , route = Routing.parseUrl url
       , loggedIn = True
+      , filesState = Loading
       }
-    , Cmd.none
+    , Http.get
+        { url = "/files/list"
+        , expect = Http.expectJson GotFiles FileTree.filesDecoder
+        }
     )
 
 
@@ -41,8 +57,6 @@ init flags url key =
 
 view : Model -> Document Message
 view model =
-    -- The inline style is being used for example purposes in order to keep this example simple and
-    -- avoid loading additional resources. Use a proper stylesheet when building your own app.
     let
         route =
             model.route
@@ -53,6 +67,9 @@ view model =
         , case route of
             LoginRoute redirect ->
                 loginView redirect
+
+            RootRoute ->
+                viewRoot model
 
             _ ->
                 section [ class "hero is-primary is-fullheight" ]
@@ -73,17 +90,54 @@ view model =
     }
 
 
+viewRoot : Model -> Html Message
+viewRoot model =
+    let
+        filesState =
+            model.filesState
+    in
+    case filesState of
+        Loading ->
+            div []
+                [ text "Loading..." ]
 
-{--
-body : Model -> Html Message
-body model =
---}
+        FilesError ->
+            div []
+                [ text "Error loading files" ]
+
+        Success files ->
+            renderFiles files
+
+
+renderFiles : FileNode -> Html Message
+renderFiles files =
+    ul [] [ renderFile [] ( "", files ) ]
+
+
+renderFile : List String -> ( String, FileNode ) -> Html Message
+renderFile path ( name, node ) =
+    case node of
+        File file ->
+            li [] [ text name ]
+
+        Folder folder ->
+            div []
+                [ text name
+                , folder.children
+                    |> Dict.toList
+                    |> List.map (renderFile (path ++ [ name ]))
+                    |> ul []
+                ]
+
+
+
 -- MESSAGE
 
 
 type Message
     = LinkClicked Browser.UrlRequest
     | UrlChanged Url.Url
+    | GotFiles (Result Http.Error FileNode)
 
 
 
@@ -103,6 +157,14 @@ update message model =
 
         UrlChanged url ->
             ( { model | route = Routing.parseUrl url }, Cmd.none )
+
+        GotFiles res ->
+            case res of
+                Ok files ->
+                    ( { model | filesState = Success files }, Cmd.none )
+
+                Err _ ->
+                    ( { model | filesState = FilesError }, Cmd.none )
 
 
 

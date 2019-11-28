@@ -1,5 +1,6 @@
 module Tests.FileTreeTest exposing (jsonSuite)
 
+import Dict
 import Expect
 import FileTree exposing (..)
 import Json.Decode exposing (decodeString)
@@ -8,7 +9,7 @@ import Test exposing (Test, describe, test)
 import Time exposing (millisToPosix)
 
 
-decoderTest : String -> String -> List FileNode -> Test
+decoderTest : String -> String -> FileNode -> Test
 decoderTest msg jsonStr expected =
     let
         decodeResult =
@@ -25,25 +26,35 @@ decoderTest msg jsonStr expected =
 
 
 jsonSuite =
-    describe "Json tests"
-        [ decoderTest "should handle empty case"
-            "[]"
-            []
-        , decoderTest "should handle single file"
-            "[{\"size\": 12, \"modified\": 22, \"name\": \"baz\"}]"
-            [ File
-                { modified = millisToPosix 22
-                , size = 12
-                , name = "baz"
-                }
-            ]
-        , decoderTest "should handle single directory"
-            "[{\"modified\": 124, \"name\": \"Buzz\", \"children\": []}]"
-            [ Folder
+    describe "filesDecoder"
+        [ decoderTest "should handle single directory"
+            "{\"modified\": 124, \"children\": {}}"
+          <|
+            Folder
                 { modified = millisToPosix 124
                 , expanded = False
-                , children = []
-                , name = "Buzz"
+                , children = Dict.empty
                 }
-            ]
+        , decoderTest
+            "should handle directory w/ a single file"
+            ("{\"modified\": 124, \"name\": \"Buzz\", \"children\":"
+                ++ "{\"baz\": {\"size\": 12, \"modified\": 22}}"
+                ++ "}"
+            )
+          <|
+            Folder
+                { modified = millisToPosix 124
+                , expanded = False
+                , children =
+                    Dict.fromList
+                        [ ( "baz"
+                          , File
+                                { modified = millisToPosix 22
+                                , size = 12
+                                }
+                          )
+                        ]
+                }
+
+        -- , decoderTest "should handle deeply nested folders"
         ]

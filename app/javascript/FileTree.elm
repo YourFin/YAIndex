@@ -1,33 +1,31 @@
 module FileTree exposing (FileNode(..), filesDecoder)
 
-import Json.Decode as Decode exposing (Decoder, field, int, lazy, list, map, map3, map4, oneOf, string, succeed)
+import Dict exposing (Dict)
+import Json.Decode as Decode exposing (Decoder, dict, field, int, lazy, list, map, map2, map3, oneOf, string, succeed)
 import Time
+
 
 type FileNode
     = Folder
         { modified : Time.Posix
-        , name : String
-        , children : List FileNode
+        , children : Dict String FileNode
         , expanded : Bool
         }
     | File
         { modified : Time.Posix
-        , name : String
         , size : Int
         }
 
 
 type alias FolderAlias =
     { modified : Time.Posix
-    , name : String
-    , children : List FileNode
+    , children : Dict String FileNode
     , expanded : Bool
     }
 
 
 type alias FileAlias =
     { modified : Time.Posix
-    , name : String
     , size : Int
     }
 
@@ -35,19 +33,17 @@ type alias FileAlias =
 folderDecoder : Decoder FileNode
 folderDecoder =
     map Folder <|
-        map4 FolderAlias
+        map3 FolderAlias
             (map Time.millisToPosix <| field "modified" int)
-            (field "name" string)
-            (field "children" (list <| lazy (\_ -> fileNodeDecoder)))
+            (field "children" (dict <| lazy (\_ -> fileNodeDecoder)))
             (succeed False)
 
 
 fileDecoder : Decoder FileNode
 fileDecoder =
     map File <|
-        map3 FileAlias
+        map2 FileAlias
             (map Time.millisToPosix <| field "modified" int)
-            (field "name" string)
             (field "size" int)
 
 
@@ -55,6 +51,7 @@ fileNodeDecoder : Decoder FileNode
 fileNodeDecoder =
     oneOf [ folderDecoder, fileDecoder ]
 
-filesDecoder : Decoder (List FileNode)
+
+filesDecoder : Decoder FileNode
 filesDecoder =
-    list fileNodeDecoder
+    folderDecoder
