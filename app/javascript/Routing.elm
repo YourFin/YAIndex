@@ -11,13 +11,23 @@ import Url.Parser.Query as Query
 
 
 type alias ContentId =
-    String
+    List String
+
+
+
+{-
+   TODO: deal with escaping /
+-}
+
+
+encodeContentId : ContentId -> String
+encodeContentId =
+    String.join "/"
 
 
 type Route
     = RootRoute
-    | SearchResultsRoute (Maybe String)
-    | ContentRoute ContentId
+    | ContentRoute ContentId (Maybe String)
     | PageNotFoundRoute
     | LoginRoute Route
 
@@ -28,11 +38,8 @@ show route =
         RootRoute ->
             "RootRoute"
 
-        SearchResultsRoute query ->
-            "SearchResultsRoute for query: " ++ Maybe.withDefault "" query
-
-        ContentRoute contentId ->
-            "ContentRoute for content: " ++ contentId
+        ContentRoute contentId _ ->
+            "ContentRoute for content: " ++ encodeContentId contentId
 
         PageNotFoundRoute ->
             "PageNotFoundRoute"
@@ -51,16 +58,15 @@ toUrlString route =
         RootRoute ->
             Url.Builder.absolute [] []
 
-        SearchResultsRoute possibleQuery ->
-            case possibleQuery of
-                Maybe.Just query ->
-                    Url.Builder.absolute [ "search" ] [ Url.Builder.string "q" query ]
+        ContentRoute contentId possibleQuery ->
+            Url.Builder.absolute [ "c", encodeContentId contentId ]
+                (case possibleQuery of
+                    Maybe.Just query ->
+                        [ Url.Builder.string "q" query ]
 
-                Maybe.Nothing ->
-                    Url.Builder.absolute [ "search" ] []
-
-        ContentRoute contentId ->
-            Url.Builder.absolute [ "c", contentId ] []
+                    Maybe.Nothing ->
+                        []
+                )
 
         PageNotFoundRoute ->
             Url.Builder.absolute [ "404" ] []
@@ -93,6 +99,20 @@ toLink route text =
 
 
 ---- PARSING
+--TODO: Handle slashes in path...
+{--|> Regex.replace "\\/" "/"
+                |> Regex.replace "\\\\" "\\"-}
+
+
+contentIdParser : Parser (ContentId -> a) a
+contentIdParser =
+    Url.Parser.custom "URLsplit" <|
+        \segment ->
+            segment
+                |> Url.percentDecode
+                |> Maybe.withDefault ""
+                |> String.split "/"
+                |> Just
 
 
 redirQuery : Query.Parser Route
@@ -115,8 +135,9 @@ matchers : Parser (Route -> a) a
 matchers =
     oneOf
         [ map RootRoute top
-        , map SearchResultsRoute (s "search" <?> Query.string "q")
-        , map ContentRoute (s "c" </> string)
+
+        --, map SearchResultsRoute (s "search" <?> Query.string "q")
+        , map ContentRoute (s "c" </> contentIdParser <?> Query.string "q")
         , map PageNotFoundRoute (s "404.html")
         , map LoginRoute (s "login" <?> redirQuery)
         ]
