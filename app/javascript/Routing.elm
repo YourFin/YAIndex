@@ -135,8 +135,7 @@ matchers : Parser (Route -> a) a
 matchers =
     oneOf
         [ map RootRoute top
-
-        --, map SearchResultsRoute (s "search" <?> Query.string "q")
+        , map (ContentRoute []) (s "c" <?> Query.string "q")
         , map ContentRoute (s "c" </> contentIdParser <?> Query.string "q")
         , map PageNotFoundRoute (s "404.html")
         , map LoginRoute (s "login" <?> redirQuery)
