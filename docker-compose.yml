@@ -12,7 +12,7 @@ services:
     ports:
       - "3000:3000"
   db:
-    image: postgres:12
+    image: postgres:11
     volumes:
       - pgdata:/var/lib/postgresql/data
     #ports:
