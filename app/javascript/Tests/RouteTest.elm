@@ -62,6 +62,16 @@ testSuite =
             ContentRoute [ "bar", "baz" ] Nothing
         , describe "inverse"
             [ testInverse <| ContentRoute [ "baz", "buzz" ] (Just "myQuery")
+            , testInverse <| ContentRoute [] Nothing
+            , testInverse <| ContentRoute [ "/" ] Nothing
+            , testInverse <| ContentRoute [ "/", "/" ] Nothing
+            , testInverse <| ContentRoute [ "\\" ] Nothing
+            , testInverse <| ContentRoute [ "\\\\" ] Nothing
+            , testInverse <| ContentRoute [ "\\\\/" ] Nothing
+            , testInverse <| ContentRoute [ "/\\" ] Nothing
+            , testInverse <| ContentRoute [ "\\/" ] Nothing
+            , testInverse <| ContentRoute [ "Hello, World!" ] Nothing
+            , testInverse <| ContentRoute [ "?q=foo" ] Nothing
             , testInverse <| ContentRoute [ "\\/foo" ] (Just "bar")
             , testInverse <| ContentRoute [ "\\/\\//\\/\\\\\\\\/" ] Nothing
             ]

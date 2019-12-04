@@ -23,7 +23,7 @@ encodeContentId id =
             Maybe.withDefault Re.never (Re.fromString str)
 
         backSlashPat =
-            reFromStr "\\"
+            reFromStr "\\\\"
 
         forwardSlashPat =
             reFromStr "/"
@@ -61,7 +61,7 @@ splitOnUnescapedPathSepHelper escaped soFar str =
             splitOnUnescapedPathSepHelper False ("" :: soFar) rest
 
         ( _, char :: rest ) ->
-            splitOnUnescapedPathSepHelper escaped (String.cons char curStr :: tail) rest
+            splitOnUnescapedPathSepHelper False (String.cons char curStr :: tail) rest
 
 
 splitOnUnescapedPathSep : String -> List String
@@ -86,8 +86,8 @@ decodeContentId input =
     in
     input
         |> splitOnUnescapedPathSep
-        |> List.map (Re.replace (reFromStr "\\/") (\_ -> "/"))
-        |> List.map (Re.replace (reFromStr "\\\\") (\_ -> "\\"))
+        |> List.map (Re.replace (reFromStr "\\\\/") (\_ -> "/"))
+        |> List.map (Re.replace (reFromStr "\\\\\\\\") (\_ -> "\\"))
         |> List.filter (\item -> not <| item == "")
 
 
