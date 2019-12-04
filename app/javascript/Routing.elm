@@ -4,6 +4,8 @@ import Html exposing (Html)
 import Html.Attributes
 import List
 import Maybe exposing (Maybe)
+import Regex as Re
+import String
 import Url exposing (Url)
 import Url.Builder
 import Url.Parser exposing ((</>), (<?>), Parser, map, oneOf, s, string, top)
@@ -14,15 +16,79 @@ type alias ContentId =
     List String
 
 
+encodeContentId : ContentId -> String
+encodeContentId id =
+    let
+        reFromStr str =
+            Maybe.withDefault Re.never (Re.fromString str)
 
-{-
-   TODO: deal with escaping /
+        backSlashPat =
+            reFromStr "\\"
+
+        forwardSlashPat =
+            reFromStr "/"
+    in
+    id
+        |> List.map (Re.replace backSlashPat (\_ -> "\\\\"))
+        |> List.map (Re.replace forwardSlashPat (\_ -> "\\/"))
+        |> String.join "/"
+
+
+
+{- Pulls items off of str and pushes them on to soFar, keeping track of escaping
+   and adding new lists where appropriate
+   Ends up with a reversed list of reversed strings that need to be flipped afterwards
 -}
 
 
-encodeContentId : ContentId -> String
-encodeContentId =
-    String.join "/"
+splitOnUnescapedPathSepHelper : Bool -> List String -> List Char -> List String
+splitOnUnescapedPathSepHelper escaped soFar str =
+    let
+        curStr =
+            Maybe.withDefault "" <| List.head soFar
+
+        tail =
+            Maybe.withDefault [] <| List.tail soFar
+    in
+    case ( escaped, str ) of
+        ( _, [] ) ->
+            soFar
+
+        ( _, '\\' :: rest ) ->
+            splitOnUnescapedPathSepHelper (not escaped) (String.cons '\\' curStr :: tail) rest
+
+        ( False, '/' :: rest ) ->
+            splitOnUnescapedPathSepHelper False ("" :: soFar) rest
+
+        ( _, char :: rest ) ->
+            splitOnUnescapedPathSepHelper escaped (String.cons char curStr :: tail) rest
+
+
+splitOnUnescapedPathSep : String -> List String
+splitOnUnescapedPathSep str =
+    let
+        flipped =
+            splitOnUnescapedPathSepHelper
+                False
+                [ "" ]
+                (String.toList str)
+    in
+    flipped
+        |> List.reverse
+        |> List.map String.reverse
+
+
+decodeContentId : String -> ContentId
+decodeContentId input =
+    let
+        reFromStr string =
+            Maybe.withDefault Re.never (Re.fromString string)
+    in
+    input
+        |> splitOnUnescapedPathSep
+        |> List.map (Re.replace (reFromStr "\\/") (\_ -> "/"))
+        |> List.map (Re.replace (reFromStr "\\\\") (\_ -> "\\"))
+        |> List.filter (\item -> not <| item == "")
 
 
 type Route
@@ -59,7 +125,7 @@ toUrlString route =
             Url.Builder.absolute [] []
 
         ContentRoute contentId possibleQuery ->
-            Url.Builder.absolute [ "c", encodeContentId contentId ]
+            Url.Builder.absolute [ "c", (encodeContentId >> Url.percentEncode) contentId ]
                 (case possibleQuery of
                     Maybe.Just query ->
                         [ Url.Builder.string "q" query ]
@@ -97,13 +163,6 @@ toLink route text =
         [ Html.text text ]
 
 
-
----- PARSING
---TODO: Handle slashes in path...
-{--|> Regex.replace "\\/" "/"
-                |> Regex.replace "\\\\" "\\"-}
-
-
 contentIdParser : Parser (ContentId -> a) a
 contentIdParser =
     Url.Parser.custom "URLsplit" <|
@@ -111,7 +170,7 @@ contentIdParser =
             segment
                 |> Url.percentDecode
                 |> Maybe.withDefault ""
-                |> String.split "/"
+                |> decodeContentId
                 |> Just
 
 

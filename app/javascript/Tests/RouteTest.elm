@@ -28,11 +28,41 @@ parserTest msg urlPath expected =
                     Expect.false "Could not parse url" True
 
 
+testInverse : Route -> Test
+testInverse route =
+    parserTest ("Should handle route: " ++ show route) (toUrlString route) route
+
+
 testSuite =
     describe "urlParser"
         [ parserTest "should parse root"
             "/"
             RootRoute
-        , parserTest "should parse base content route" "/c/" <|
+        , parserTest "should parse base content route w/ trailing slash" "/c/" <|
             ContentRoute [] Nothing
+        , parserTest "should parse base content route w/o trailing slash" "/c" <|
+            ContentRoute [] Nothing
+        , parserTest "should parse single child content route" "/c/foo" <|
+            ContentRoute [ "foo" ] Nothing
+        , parserTest "should parse base query route w/ trailing slash" "/c/?q=foo" <|
+            ContentRoute [] (Just "foo")
+        , parserTest "should parse base query w/o trailing slash" "/c?q=foo" <|
+            ContentRoute [] (Just "foo")
+        , parserTest "should parse nested path"
+            ("/c/"
+                ++ Url.percentEncode "bar/baz"
+            )
+          <|
+            ContentRoute [ "bar", "baz" ] Nothing
+        , parserTest "should ignore empty paths"
+            ("/c/"
+                ++ Url.percentEncode "///bar//baz//"
+            )
+          <|
+            ContentRoute [ "bar", "baz" ] Nothing
+        , describe "inverse"
+            [ testInverse <| ContentRoute [ "baz", "buzz" ] (Just "myQuery")
+            , testInverse <| ContentRoute [ "\\/foo" ] (Just "bar")
+            , testInverse <| ContentRoute [ "\\/\\//\\/\\\\\\\\/" ] Nothing
+            ]
         ]
