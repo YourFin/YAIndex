@@ -37,7 +37,10 @@ testSuite =
     describe "urlParser"
         [ parserTest "should parse root"
             "/"
-            RootRoute
+            (ContentRoute
+                []
+                Nothing
+            )
         , parserTest "should parse base content route w/ trailing slash" "/c/" <|
             ContentRoute [] Nothing
         , parserTest "should parse base content route w/o trailing slash" "/c" <|
