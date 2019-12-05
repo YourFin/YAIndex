@@ -12,6 +12,12 @@ RUN npm install --global yarn
 #Install nginx
 RUN apt-get install -y nginx
 
+# Allow heroku remote debugging
+RUN rm /bin/sh \
+  && ln -s /bin/bash /bin/sh \
+  && mkdir -p /app/.profile.d
+ADD ./bin/heroku-exec.sh /app/.profile.d/heroku-exec.sh
+
 # cd into /app
 ENV APP_PATH=/app
 
@@ -43,4 +49,4 @@ RUN FILES_DIRECTORY="/app/test_files/" bundle exec rake assets:precompile
 ENTRYPOINT ["entrypoint.sh"]
 EXPOSE 80
 
-CMD ["./bin/run-dev.sh"]
+CMD bash /app/.profile.d/heroku-exec.sh && ./bin/run-dev.sh
