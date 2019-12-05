@@ -22,8 +22,8 @@ COPY Gemfile.lock ${APP_PATH}/Gemfile.lock
 WORKDIR ${APP_PATH}
 RUN bundle install
 
-COPY package.json ${APP_PATH}/package.json
-COPY yarn.lock ${APP_PATH}/yarn.lock
+#COPY package.json ${APP_PATH}/package.json
+#COPY yarn.lock ${APP_PATH}/yarn.lock
 #RUN yarn install --check-files
 
 # Configure nginx
@@ -38,7 +38,7 @@ RUN chmod +x /usr/bin/entrypoint.sh
 COPY . ${APP_PATH}
 
 # Build application files
-RUN bundle exec rake assets:precompile
+RUN FILES_DIRECTORY="/app/test_files/" bundle exec rake assets:precompile
 
 ENTRYPOINT ["entrypoint.sh"]
 EXPOSE 80
