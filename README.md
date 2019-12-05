@@ -1,24 +1,21 @@
-# README
+# Browser
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+This application is intended as nicer way to browse a folder than nginx's `autoindex` and apache's `mod_autoindex`.
+Currently it's set up to only browse the `test_files` directory in this directory, but in the future instructions will be provided for using other folders.
 
-Things you may want to cover:
+A demo is deployed on heroku, and can be seen [here](https://protected-mesa-32806.herokuapp.com/c/)
 
-* Ruby version
+# Setup
+## Development
+1. Install Docker
+1. Clone this repo: `git clone https://github.com/YourFin/browser.git && cd browser`
+1. `docker-compose run rails bin/initialize.sh`
+1. `docker-compose up`
 
-* System dependencies
+# How?
 
-* Configuration
+Currently this application works by running nginx _inside_ the same container as rails, and then reverse proxying all requests to rails except for `/raw/`, which is aliased to the `test_files` directory to serve files directory.
 
-* Database creation
+The frontend is written in elm (see [/app/javascript](/app/javascript)), with rails acting as an api.
 
-* Database initialization
-
-* How to run the test suite
-
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...
+The current [production dockerfile](/Dockerfile-prod) includes debugging support for heroku, I'll pull this support
