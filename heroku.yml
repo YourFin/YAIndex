@@ -7,5 +7,3 @@ build:
     web: Dockerfile-prod
   config:
     RAILS_ENV: production
-run:
-  web: /app/bin/run-prod.sh
