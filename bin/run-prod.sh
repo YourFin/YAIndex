@@ -25,4 +25,4 @@ cleanup () {
 trap cleanup EXIT
 
 # Start puma
-bundle exec puma -b "tcp://localhost" -C /app/config/puma.rb
+bundle exec puma -b "tcp://localhost:3000" -C /app/config/puma.rb
