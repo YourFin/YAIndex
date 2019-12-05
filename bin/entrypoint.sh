@@ -3,6 +3,7 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-rm -f /myapp/tmp/pids/server.pid || true
+rm -f /app/tmp/pids/server.pid || true
+rm -f /run/nginx.pid
 
 exec "$@"

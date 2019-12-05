@@ -8,7 +8,8 @@ RUN curl -sL https://deb.nodesource.com/setup_11.x | bash - && \
 RUN apt-get install -y parallel
 RUN echo "will cite\n" | parallel --citation &>/dev/null # Tell parallel that we will,
                                                          # in fact, cite it if we use
-                                                         # it in an academic publication
+  # it in an academic publication
+RUN apt-get install -y nginx
 
 # Install yarn
 RUN npm install --global yarn
@@ -27,6 +28,10 @@ COPY package.json ${APP_PATH}/package.json
 COPY yarn.lock ${APP_PATH}/yarn.lock
 RUN yarn install --check-files
 
+# Configure nginx
+RUN useradd -ms /bin/false nginx
+COPY nginx/nginx.conf /etc/nginx/nginx.conf
+
 # Copy application files
 COPY . ${APP_PATH}
 
@@ -36,6 +41,6 @@ RUN bash -c "yarn run elm make /app/javascript/Main.elm --output=/dev/null 2>/de
 COPY bin/entrypoint.sh /usr/bin
 RUN chmod +x /usr/bin/entrypoint.sh
 ENTRYPOINT ["entrypoint.sh"]
-EXPOSE 3000
+EXPOSE 80
 
-CMD ["rails", "server", "-b", "0.0.0.0"]
+CMD ["./bin/run-dev.sh"]

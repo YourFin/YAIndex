@@ -7,6 +7,10 @@ set -euo pipefail
 # Remove the previous server pid if it exists.
 # This is recommended by most every tutorial for rails and docker.
 rm -f tmp/pids/server.pid
+rm -f /run/nginx.pid
+chmod -R a+r /app/test_files
+
+nginx
 
 ESCAPE_CHAR=$(printf '\033') # Special escape character that allows for color codes
 # See: https://misc.flogisoft.com/bash/tip_colors_and_formatting
