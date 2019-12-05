@@ -9,18 +9,18 @@ rm -f tmp/pids/server.pid
 rm -f /run/nginx.pid
 
 # Make sure PORT and FILES_DIRECTORY are set
-PORT="${PORT:-80}"
-FILES_DIRECTORY="${FILES_DIRECTORY:-/app/test_files/}"
+export PORT="${PORT:-80}"
+export FILES_DIRECTORY="${FILES_DIRECTORY:-/app/test_files/}"
 
 # Substitute environment variables into nginx.conf
 envsubst '$PORT $FILES_DIRECTORY' < nginx/nginx.template.conf > nginx/nginx.conf
 
 # Start nginx
-nginx -c nginx/nginx.conf
+nginx -c /app/nginx/nginx.conf
 
 # Kill nginx when this script stops
 cleanup () {
-    nginx -c nginx/nginx.conf -s quit
+    nginx -c /app/nginx/nginx.conf -s quit
 }
 trap cleanup EXIT
 
