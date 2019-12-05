@@ -88,8 +88,8 @@ contentView zone filesState contentId query =
             zipBreadcrumb fullBreadcrumb
 
         breadcrumbContainer item =
-            section [ class "section" ]
-                [ nav [ class "breadcrumb is-left", ariaLabel "breadcrumbs" ] [ item ]
+            section [ class "breadcrumb-section section" ]
+                [ nav [ class "breadcrumb is-left is-medium", ariaLabel "breadcrumbs" ] [ item ]
                 ]
     in
     [ breadcrumbContainer
@@ -113,7 +113,8 @@ contentView zone filesState contentId query =
                    )
             )
         )
-    , body
+    , section [ class "section" ]
+        [ div [ class "container" ] [ body ] ]
     ]
 
 
