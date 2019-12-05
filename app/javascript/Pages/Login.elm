@@ -5,9 +5,9 @@ import Html.Attributes exposing (class, style)
 import Routing exposing (Route(..))
 
 
-loginView : Route -> Html msg
-loginView =
-    loginForm
+loginView : Route -> List (Html msg)
+loginView route =
+    [ loginForm route ]
 
 
 loginForm : Route -> Html msg

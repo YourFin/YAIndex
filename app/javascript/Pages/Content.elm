@@ -5,11 +5,13 @@ import Dict
 import FileTree exposing (FileNode(..))
 import Filesize
 import Html exposing (..)
-import Html.Attributes exposing (class, style)
+import Html.Attributes exposing (class, href, style)
 import List
-import ListUtils as Lst
-import Maybe
-import MiscView
+import List.Nonempty as NE exposing (Nonempty(..))
+import ListUtils as LU
+import ListUtils.Nonempty as NEU
+import Maybe exposing (Maybe(..))
+import MiscView exposing (ariaLabel)
 import Routing exposing (Route(..))
 import Time
 import Url
@@ -46,7 +48,7 @@ contentFileNode node path =
                     Maybe.Nothing
 
 
-contentView : Time.Zone -> FilesState -> Routing.ContentId -> Maybe String -> Html msg
+contentView : Time.Zone -> FilesState -> Routing.ContentId -> Maybe String -> List (Html msg)
 contentView zone filesState contentId query =
     let
         body =
@@ -66,18 +68,53 @@ contentView zone filesState contentId query =
                         Maybe.Nothing ->
                             div [ class "content" ]
                                 [ text "File not found" ]
+
+        fullBreadcrumb =
+            NEU.appendToNonEmpty (NE.fromElement "Home") contentId
+
+        -- [a,b] -> [(a, [a]), (b, [a,b])]
+        zipBreadcrumb : Nonempty String -> Nonempty ( String, Nonempty String )
+        zipBreadcrumb breadcrumb =
+            case breadcrumb of
+                NE.Nonempty head [] ->
+                    NE.Nonempty ( head, NE.fromElement head ) []
+
+                NE.Nonempty head (next :: tail) ->
+                    NE.append
+                        (zipBreadcrumb (Nonempty head (NEU.init (Nonempty next tail))))
+                        (NE.fromElement ( NEU.last breadcrumb, breadcrumb ))
+
+        zippedBreadcrumb =
+            zipBreadcrumb fullBreadcrumb
+
+        breadcrumbContainer item =
+            section [ class "section" ]
+                [ nav [ class "breadcrumb is-left", ariaLabel "breadcrumbs" ] [ item ]
+                ]
     in
-    div []
-        [ nav [ class "breadcrumb is-right" ]
-            [ ul []
-                {- todo List.map (pathPart ->
-                   li []
+    [ breadcrumbContainer
+        (ul []
+            (zippedBreadcrumb
+                |> NE.map
+                    (\( item, NE.Nonempty _ path ) ->
+                        Routing.toLink
+                            (ContentRoute path Nothing)
+                            item
+                    )
+                |> NEU.init
+                |> List.map (\item -> li [] [ item ])
+                |> (\lst ->
+                        lst
+                            ++ [ li [ class "is-active" ]
+                                    [ a [ href "#" ]
+                                        [ text <| NEU.last fullBreadcrumb ]
+                                    ]
+                               ]
                    )
-                -}
-                [ text "todo" ]
-            ]
-        , body
-        ]
+            )
+        )
+    , body
+    ]
 
 
 renderFiles : Time.Zone -> FileNode -> Routing.ContentId -> Maybe String -> Html msg
@@ -88,7 +125,7 @@ renderFiles zone files contentId query =
             Routing.toLink (ContentRoute (contentId ++ [ name ]) Maybe.Nothing) name
 
         thisItemName =
-            Maybe.withDefault "/" (Lst.last contentId)
+            Maybe.withDefault "/" (LU.last contentId)
     in
     case files of
         Folder folder ->
