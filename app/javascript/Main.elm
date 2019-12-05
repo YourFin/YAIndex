@@ -2,10 +2,8 @@ module Main exposing (..)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav
-import DateFormat
 import Dict
-import FileTree exposing (FileNode(..))
-import Filesize
+import FileTree exposing (FileNode)
 import Html exposing (..)
 import Html.Attributes exposing (class, style)
 import Http
