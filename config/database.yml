@@ -17,7 +17,7 @@
 default: &default
   adapter: postgresql
   encoding: unicode
-  host:     <%= ENV.fetch("POSTGRES_HOST") { "db" }           %>
+  host:     <%= ENV.fetch("DATABASE_URL") { "db" }           %>
   username: <%= ENV.fetch("POSTGRES_USERNAME") { "postgres" } %>
   password: <%= ENV.fetch("POSTGRES_PASSWORD") { "" }         %>
 
@@ -84,6 +84,7 @@ test:
 #
 production:
   <<: *default
+  sslmode: "require"
   database: rails-elm-sample_production
-  username: rails-elm-sample
-  password: <%= ENV['RESEARCHER_DATABASE_PASSWORD'] %>
+  username: <%= ENV.fetch("POSTGRES_USERNAME") { "" } %>
+  password: <%= ENV.fetch("POSTGRES_PASSWORD") { "" } %>
