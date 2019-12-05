@@ -9,6 +9,8 @@ RUN apt-get install -y parallel
 RUN echo "will cite\n" | parallel --citation &>/dev/null # Tell parallel that we will,
                                                          # in fact, cite it if we use
   # it in an academic publication
+
+#Install nginx
 RUN apt-get install -y nginx
 
 # Install yarn
@@ -28,6 +30,10 @@ COPY package.json ${APP_PATH}/package.json
 COPY yarn.lock ${APP_PATH}/yarn.lock
 RUN yarn install --check-files
 
+# Copy over entrypoint
+COPY bin/entrypoint.sh /usr/bin
+RUN chmod +x /usr/bin/entrypoint.sh
+
 # Configure nginx
 RUN useradd -ms /bin/false nginx
 COPY nginx/nginx.conf /etc/nginx/nginx.conf
@@ -38,8 +44,6 @@ COPY . ${APP_PATH}
 # Attempt to build elm packages to pull in dependencies
 RUN bash -c "yarn run elm make /app/javascript/Main.elm --output=/dev/null 2>/dev/null || true"
 
-COPY bin/entrypoint.sh /usr/bin
-RUN chmod +x /usr/bin/entrypoint.sh
 ENTRYPOINT ["entrypoint.sh"]
 EXPOSE 80
 
