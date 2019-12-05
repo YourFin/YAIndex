@@ -1,4 +1,3 @@
 class WebAppController < ApplicationController
-  def main
-  end
+  def main; end
 end

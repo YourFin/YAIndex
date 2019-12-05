@@ -9,13 +9,13 @@
 //require("channels")
 
 import {
-    Elm
+  Elm
 } from '../Main';
 import '../styles/main.scss';
-import "@fortawesome/fontawesome-free/scss/fontawesome.scss";
+import '@fortawesome/fontawesome-free/scss/fontawesome.scss';
 
 document.addEventListener('DOMContentLoaded', () => {
-    Elm.Main.init();
+  Elm.Main.init();
 });
 
 // Uncomment to copy all static images under ../images to the output folder and reference
