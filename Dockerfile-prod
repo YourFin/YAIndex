@@ -9,8 +9,8 @@ RUN curl -sL https://deb.nodesource.com/setup_11.x | bash - && \
 # Install yarn
 RUN npm install --global yarn
 
-#Install nginx
-RUN apt-get install -y nginx
+#Install nginx, envsubst, postgres client
+RUN apt-get install -y nginx gettext-base postgresql-client
 
 # Allow heroku remote debugging
 RUN rm /bin/sh \
