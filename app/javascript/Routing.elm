@@ -1,4 +1,4 @@
-module Routing exposing (Route(..), parseUrl, show, toHref, toLink, toUrlString)
+module Routing exposing (ContentId, Route(..), parseUrl, rootRoute, show, toHref, toLink, toUrlString)
 
 import Html exposing (Html)
 import Html.Attributes
@@ -14,6 +14,17 @@ import Url.Parser.Query as Query
 
 type alias ContentId =
     List String
+
+
+type Route
+    = ContentRoute ContentId (Maybe String)
+    | PageNotFoundRoute
+    | LoginRoute Route
+
+
+rootRoute : Route
+rootRoute =
+    ContentRoute [] Maybe.Nothing
 
 
 encodeContentId : ContentId -> String
@@ -91,19 +102,9 @@ decodeContentId input =
         |> List.filter (\item -> not <| item == "")
 
 
-type Route
-    = RootRoute
-    | ContentRoute ContentId (Maybe String)
-    | PageNotFoundRoute
-    | LoginRoute Route
-
-
 show : Route -> String
 show route =
     case route of
-        RootRoute ->
-            "RootRoute"
-
         ContentRoute contentId _ ->
             "ContentRoute for content: " ++ encodeContentId contentId
 
@@ -121,9 +122,6 @@ show route =
 toUrlString : Route -> String
 toUrlString route =
     case route of
-        RootRoute ->
-            Url.Builder.absolute [] []
-
         ContentRoute contentId possibleQuery ->
             Url.Builder.absolute [ "c", (encodeContentId >> Url.percentEncode) contentId ]
                 (case possibleQuery of
@@ -139,9 +137,6 @@ toUrlString route =
 
         LoginRoute redirRoute ->
             case redirRoute of
-                RootRoute ->
-                    Url.Builder.absolute [ "login" ] []
-
                 LoginRoute _ ->
                     toUrlString redirRoute
 
@@ -184,16 +179,16 @@ redirQuery =
                         ++ str
                         |> Url.fromString
                         |> Maybe.map parseUrl
-                        |> Maybe.withDefault RootRoute
+                        |> Maybe.withDefault rootRoute
 
                 _ ->
-                    RootRoute
+                    rootRoute
 
 
 matchers : Parser (Route -> a) a
 matchers =
     oneOf
-        [ map RootRoute top
+        [ map rootRoute top
         , map (ContentRoute []) (s "c" <?> Query.string "q")
         , map ContentRoute (s "c" </> contentIdParser <?> Query.string "q")
         , map PageNotFoundRoute (s "404.html")

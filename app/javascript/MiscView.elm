@@ -10,7 +10,7 @@ navbar : Html msg
 navbar =
     nav [ class "navbar has-shadow", role "navigation", ariaLabel "main navigation" ]
         [ div [ class "navbar-brand" ]
-            [ a [ class "navbar-item", Routing.toHref Routing.RootRoute ]
+            [ a [ class "navbar-item", Routing.toHref Routing.rootRoute ]
                 [ h1 [] [ text "Browser" ] ]
             ]
         ]
