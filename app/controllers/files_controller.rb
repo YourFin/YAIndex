@@ -31,7 +31,6 @@ class FilesController < ApiController
            rescue StandardError
              return false
     end
-    p path
     while path != browser_root_path
       return false if SYSTEM_ROOT_PATH == path
 
