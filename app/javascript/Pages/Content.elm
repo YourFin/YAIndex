@@ -159,10 +159,10 @@ renderFiles zone files contentId query =
                                 icon =
                                     case node of
                                         File _ ->
-                                            i [ class "fas fa-file" ] []
+                                            i [ class "fas fa-file", ariaLabel "File" ] []
 
                                         Folder _ ->
-                                            i [ class "fas fa-folder" ] []
+                                            i [ class "fas fa-folder", ariaLabel "Folder" ] []
                             in
                             tr []
                                 [ td []
