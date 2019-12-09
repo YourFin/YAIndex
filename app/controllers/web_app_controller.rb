@@ -1,6 +1,6 @@
 class WebAppController < ApplicationController
   def main
-    render :template => "web_app/main.html.erb"
+    render :template => 'web_app/main.html.erb'
   end
 
   protected
