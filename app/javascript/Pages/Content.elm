@@ -205,6 +205,17 @@ renderFiles zone files contentId query =
                     )
                 , br [] []
                 , text ("Size: " ++ Filesize.format file.size)
+                , br [] []
+
+                --, div [ class "buttons" ] [] - for multiple buttons
+                , a [ Routing.contentIdRawHref contentId ]
+                    [ button
+                        [ class "button is-link" ]
+                        [ span [] [ text "Open" ]
+                        , span [ class "icon is-small" ]
+                            [ i [ class "fas fa-chevron-circle-down" ] [] ]
+                        ]
+                    ]
                 ]
 
 
