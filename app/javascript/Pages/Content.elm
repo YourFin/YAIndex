@@ -114,7 +114,7 @@ contentView zone filesState contentId query =
             )
         )
     , section [ class "section" ]
-        [ div [ class "container" ] [ body ] ]
+        [ div [ class "container is-fluid" ] [ body ] ]
     ]
 
 
