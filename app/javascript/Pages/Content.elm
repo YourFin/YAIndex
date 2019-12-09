@@ -5,7 +5,7 @@ import Dict
 import FileTree exposing (FileNode(..))
 import Filesize
 import Html exposing (..)
-import Html.Attributes exposing (class, href, style)
+import Html.Attributes exposing (class, href, id, style)
 import List
 import List.Nonempty as NE exposing (Nonempty(..))
 import ListUtils as LU
@@ -121,9 +121,9 @@ contentView zone filesState contentId query =
 renderFiles : Time.Zone -> FileNode -> Routing.ContentId -> Maybe String -> Html msg
 renderFiles zone files contentId query =
     let
-        makeLink : String -> Html msg
-        makeLink name =
-            Routing.toLink (ContentRoute (contentId ++ [ name ]) Maybe.Nothing) name
+        makeHref : String -> Html.Attribute msg
+        makeHref name =
+            Routing.toHref (ContentRoute (contentId ++ [ name ]) Maybe.Nothing)
 
         thisItemName =
             Maybe.withDefault "/" (LU.last contentId)
@@ -155,9 +155,22 @@ renderFiles zone files contentId query =
 
                                         Folder fol ->
                                             fol.modified
+
+                                icon =
+                                    case node of
+                                        File _ ->
+                                            i [ class "fas fa-file" ] []
+
+                                        Folder _ ->
+                                            i [ class "fas fa-folder" ] []
                             in
                             tr []
-                                [ td [] [ makeLink name ]
+                                [ td []
+                                    [ a [ makeHref name ]
+                                        [ span [ class "icon is-small" ] [ icon ]
+                                        , span [ id "content-table-name" ] [ text name ]
+                                        ]
+                                    ]
                                 , td [] [ text sizeText ]
                                 , td []
                                     [ text
