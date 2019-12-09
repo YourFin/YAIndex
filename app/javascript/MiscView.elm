@@ -31,9 +31,9 @@ ariaExpanded =
     attribute "aria-expanded"
 
 
-ariaHidden : String -> Attribute msg
+ariaHidden : Attribute msg
 ariaHidden =
-    attribute "aria-hidden"
+    attribute "aria-hidden" "true"
 
 
 dataTarget : String -> Attribute msg

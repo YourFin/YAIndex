@@ -11,7 +11,7 @@ import List.Nonempty as NE exposing (Nonempty(..))
 import ListUtils as LU
 import ListUtils.Nonempty as NEU
 import Maybe exposing (Maybe(..))
-import MiscView exposing (ariaLabel)
+import MiscView exposing (ariaHidden, ariaLabel)
 import Routing exposing (Route(..))
 import Time
 import Url
@@ -225,7 +225,7 @@ renderFiles zone files contentId query =
                     [ button
                         [ class "button is-link" ]
                         [ span [] [ text "Open" ]
-                        , span [ class "icon is-small" ]
+                        , span [ class "icon is-small", ariaHidden ]
                             [ i [ class "fas fa-chevron-circle-down" ] [] ]
                         ]
                     ]
