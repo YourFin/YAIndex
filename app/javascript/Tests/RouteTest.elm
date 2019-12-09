@@ -1,4 +1,4 @@
-module Tests.RouteTest exposing (parserTest, testSuite)
+module Tests.RouteTest exposing (isElmUrlSuite, urlParserSuite)
 
 import Dict
 import Expect
@@ -33,7 +33,7 @@ testInverse route =
     parserTest ("Should handle route: " ++ show route) (toUrlString route) route
 
 
-testSuite =
+urlParserSuite =
     describe "urlParser"
         [ parserTest "should parse root"
             "/"
@@ -78,4 +78,39 @@ testSuite =
             , testInverse <| ContentRoute [ "\\/foo" ] (Just "bar")
             , testInverse <| ContentRoute [ "\\/\\//\\/\\\\\\\\/" ] Nothing
             ]
+        ]
+
+
+isElmUrlSuite =
+    let
+        testInternal isElm msg path =
+            let
+                url =
+                    Url.fromString ("http://does-not-matter" ++ path)
+
+                mActualIsElmUrl =
+                    Maybe.map isElmUrl url
+
+                actualIsElmUrl =
+                    Maybe.withDefault False mActualIsElmUrl
+            in
+            test msg <|
+                \_ ->
+                    if isElm then
+                        Expect.true "Should be an elm internal url" actualIsElmUrl
+
+                    else
+                        Expect.false "Should be a non-elm url" actualIsElmUrl
+    in
+    describe "isExternalUrl"
+        [ testInternal True "Root should be internal" "/"
+        , testInternal True "Random content route should be internal" "/c/foo"
+        , testInternal True "Root content route should be internal" "/c/"
+        , testInternal True "Root content route should be internal w/o slash" "/c"
+        , testInternal True "Unknown path should be internal" "/unknown_untaken_path_/foo"
+        , testInternal True "404 should be internal" "/404.html"
+        , testInternal False "Root raw path should be external w/o slash" "/raw"
+        , testInternal False "Root raw path should be external" "/raw/"
+        , testInternal False "Simple raw path should be external" "/raw/foo"
+        , testInternal False "Double raw path should be external" "/raw/foo/bar"
         ]

@@ -1,4 +1,4 @@
-module Routing exposing (ContentId, Route(..), parseUrl, rootRoute, show, toHref, toLink, toUrlString)
+module Routing exposing (ContentId, Route(..), contentIdRawHref, isElmUrl, parseUrl, rootRoute, show, toHref, toLink, toUrlString)
 
 import Html exposing (Html)
 import Html.Attributes
@@ -45,13 +45,10 @@ encodeContentId id =
         |> String.join "/"
 
 
-
-{- Pulls items off of str and pushes them on to soFar, keeping track of escaping
-   and adding new lists where appropriate
-   Ends up with a reversed list of reversed strings that need to be flipped afterwards
+{-| Pulls items off of str and pushes them on to soFar, keeping track of escaping
+and adding new lists where appropriate
+Ends up with a reversed list of reversed strings that need to be flipped afterwards
 -}
-
-
 splitOnUnescapedPathSepHelper : Bool -> List String -> List Char -> List String
 splitOnUnescapedPathSepHelper escaped soFar str =
     let
@@ -102,6 +99,10 @@ decodeContentId input =
         |> List.filter (\item -> not <| item == "")
 
 
+
+---- EXPORT
+
+
 show : Route -> String
 show route =
     case route of
@@ -113,10 +114,6 @@ show route =
 
         LoginRoute redirRoute ->
             "LoginRoute redirecting to: " ++ show redirRoute
-
-
-
----- EXPORT
 
 
 toUrlString : Route -> String
@@ -156,6 +153,35 @@ toLink route text =
     Html.a
         [ Html.Attributes.href (toUrlString route) ]
         [ Html.text text ]
+
+
+contentIdRawHref : ContentId -> Html.Attribute msg
+contentIdRawHref path =
+    let
+        link =
+            Url.Builder.absolute
+                ([ "raw" ] ++ List.map Url.percentEncode path)
+                []
+    in
+    Html.Attributes.href link
+
+
+
+--- PARSING
+
+
+{-| Returns false if the url should be redirected, despite being to the same
+authority as the webapp. This is done because parsers cannot be written to handle
+arbitrary path segments in elm, i.e. raw/foo/bar/baz.txt, which should, actually
+redirect and not have the parser barf
+-}
+isElmUrl : Url -> Bool
+isElmUrl url =
+    let
+        rawPat =
+            Maybe.withDefault Re.never <| Re.fromString "^/raw"
+    in
+    not <| Re.contains rawPat url.path
 
 
 contentIdParser : Parser (ContentId -> a) a
