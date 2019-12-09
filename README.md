@@ -1,9 +1,9 @@
-# Browser
+# YAIndex
+Yet Another Index - prettier replacement for nginx's `autoindex` and apache's `mod_autoindex`.
 
-This application is intended as nicer way to browse a folder than nginx's `autoindex` and apache's `mod_autoindex`.
 Currently it's set up to only browse the `test_files` directory in this directory, but in the future instructions will be provided for using other folders.
 
-A demo is deployed on heroku, and can be seen [here](https://protected-mesa-32806.herokuapp.com/c/)
+A demo is deployed on heroku, and can be seen [here](https://yaindex-example.herokuapp.com/)
 
 # Setup
 ## Development
