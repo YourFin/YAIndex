@@ -64,11 +64,15 @@ view model =
     let
         route =
             model.route
+
+        mainWrapper elements =
+            [ main_ [] elements ]
     in
     { title = "Browser"
     , body =
-        [ MiscView.navbar ]
-            ++ (case route of
+        [ header [] [ MiscView.navbar ] ]
+            ++ mainWrapper
+                (case route of
                     LoginRoute redirect ->
                         loginView redirect
 
@@ -91,7 +95,7 @@ view model =
                                 ]
                             ]
                         ]
-               )
+                )
     }
 
 
