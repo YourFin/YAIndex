@@ -11,8 +11,6 @@
 import {
   Elm
 } from '../Main';
-import '../styles/main.scss';
-import '@fortawesome/fontawesome-free/scss/fontawesome.scss';
 
 document.addEventListener('DOMContentLoaded', () => {
   Elm.Main.init();
