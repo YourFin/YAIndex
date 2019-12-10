@@ -11,7 +11,6 @@ services:
       - /app/elm-stuff # Fix elm compiler issues
     ports:
       - "3000:80"
-      - "3035:3035"
   db:
     image: postgres:11
     volumes:
