@@ -10,7 +10,7 @@ services:
       - /app/node_modules # Fix yarn issues
       - /app/elm-stuff # Fix elm compiler issues
     ports:
-      - "3000:80"
+      - "3030:3030"
   db:
     image: postgres:11
     volumes:
