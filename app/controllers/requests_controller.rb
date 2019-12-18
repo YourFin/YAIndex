@@ -2,8 +2,12 @@ class RequestsController < ApplicationController
   def new; end
 
   def create
-    render plain: params[:request].inspect
+    @request = Request.new(params.require(:request).permit(:body))
+    @request.save
+    redirect_to :requests
   end
 
-  def list; end
+  def list
+    @requests = Request.all
+  end
 end
