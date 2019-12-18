@@ -8,7 +8,7 @@ import Routing
 
 navbar : Html msg
 navbar =
-    nav [ class "navbar has-shadow", role "navigation", ariaLabel "main navigation" ]
+    nav [ class "navbar has-shadow is-primary", role "navigation", ariaLabel "main navigation" ]
         [ div [ class "navbar-brand" ]
             [ a [ class "navbar-item", Routing.toHref Routing.rootRoute ]
                 [ h1 [] [ text "Browser" ] ]

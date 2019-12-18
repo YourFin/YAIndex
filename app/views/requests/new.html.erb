@@ -1,12 +1,31 @@
-<h1>Requests#new</h1>
-<p>Find me in app/views/requests/new.html.erb</p>
-<%= form_with scope: :request, local: true do |form| %>
-  <p>
-    <%= form.label :text %>
-    <%= form.text_area :text %>
-  </p>
-
-  <p>
-    <%= form.submit %>
-  </p>
-<% end %>
+<header>
+  <nav class="navbar has-shadow is-primary" role="navigation" aria-label="main navigation">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="/c/"><h1>Browser</h1></a>
+    </div>
+  </nav>
+</header>
+<main>
+  <section class="section">
+    <div class="container">
+      <div class="content">
+        <h2>Request new content</h2>
+      </div>
+      <%= form_with scope: :request, local: true do |form| %>
+        <div class="field">
+          <%= form.label :text, class: "label" %>
+          <div class="control">
+            <%= form.text_area :text,
+                   placeholder: "It would be really nice to have more cat pictures!",
+                   class: "textarea",
+                   rows: 6
+            %>
+          </div>
+        </div>
+        <div class="field">
+          <%= form.submit class: "button is-link", text: "Hello, world" %>
+        </div>
+      <% end %>
+    </div>
+  </section>
+</main>
