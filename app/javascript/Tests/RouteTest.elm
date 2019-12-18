@@ -113,4 +113,8 @@ isElmUrlSuite =
         , testInternal False "Root raw path should be external" "/raw/"
         , testInternal False "Simple raw path should be external" "/raw/foo"
         , testInternal False "Double raw path should be external" "/raw/foo/bar"
+        , testInternal False "Root requests path should be external w/o slash" "/requests"
+        , testInternal False "Root requests path should be external" "/requests/"
+        , testInternal False "Simple requests path should be external" "/requests/foo"
+        , testInternal False "Double requests path should be external" "/requests/foo/bar"
         ]

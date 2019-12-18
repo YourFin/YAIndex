@@ -1,0 +1,12 @@
+<h1>Requests#new</h1>
+<p>Find me in app/views/requests/new.html.erb</p>
+<%= form_with scope: :request, local: true do |form| %>
+  <p>
+    <%= form.label :text %>
+    <%= form.text_area :text %>
+  </p>
+
+  <p>
+    <%= form.submit %>
+  </p>
+<% end %>

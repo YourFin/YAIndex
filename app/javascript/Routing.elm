@@ -180,8 +180,14 @@ isElmUrl url =
     let
         rawPat =
             Maybe.withDefault Re.never <| Re.fromString "^/raw"
+
+        requestsPat =
+            Maybe.withDefault Re.never <| Re.fromString "^/requests"
     in
-    not <| Re.contains rawPat url.path
+    not <|
+        List.foldl (\pat -> \state -> Re.contains pat url.path || state)
+            False
+            [ rawPat, requestsPat ]
 
 
 contentIdParser : Parser (ContentId -> a) a
