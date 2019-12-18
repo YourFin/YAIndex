@@ -129,7 +129,7 @@ renderFiles zone files contentId query =
     in
     case files of
         Folder folder ->
-            table [ class "table" ]
+            table [ class "table", ariaLabel "List of files" ]
                 [ thead []
                     [ th [] [ text "File" ]
                     , th [] [ text "Size" ]
