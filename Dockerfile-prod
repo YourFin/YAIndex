@@ -18,8 +18,8 @@ RUN rm /bin/sh \
   && mkdir -p /app/.profile.d
 ADD ./bin/heroku-exec.sh /app/.profile.d/heroku-exec.sh
 
-# cd into /app
 ENV APP_PATH=/app
+ENV RAILS_ENV=production
 
 # Install gems
 RUN mkdir -p $APP_PATH
