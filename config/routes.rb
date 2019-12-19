@@ -1,6 +1,7 @@
 Rails.application.routes.draw do
   get 'requests', to: 'requests#list'
-  resources :requests
+  resources :requests, only: [:new, :index, :create]
+
   get 'files/list'
   # For details on the DSL available within this file, see https://guides.rubyonrails.org/routing.html
   root 'web_app#main'
