@@ -20,13 +20,14 @@ ADD ./bin/heroku-exec.sh /app/.profile.d/heroku-exec.sh
 
 ENV APP_PATH=/app
 ENV RAILS_ENV=production
+ENV RAILS_SERVE_STATIC_FILES true
 
 # Install gems
 RUN mkdir -p $APP_PATH
 COPY Gemfile ${APP_PATH}/Gemfile
 COPY Gemfile.lock ${APP_PATH}/Gemfile.lock
 WORKDIR ${APP_PATH}
-RUN bundle config --global frozen 1
+ENV GEM_PATH=/usr/local/bundle
 RUN bundle install --without development test
 
 COPY package.json ${APP_PATH}/package.json
