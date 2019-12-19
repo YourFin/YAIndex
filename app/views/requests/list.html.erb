@@ -1,4 +1,16 @@
 <%= render "requests/wrapper" do %>
+  <nav class="level">
+    <div class="level-left">
+      <div class="level-item">
+        <p class="subtitle is-3">Requests</p>
+      </div>
+      </div>
+      <div class="level-right">
+        <div class="level-item">
+          <%= link_to '<button class="button is-link">New Request</button>'.html_safe, :new_request %>
+      </div>
+    </div>
+  </nav>
   <table class="table is-fullwidth">
     <tr>
       <th>Created at</th>
