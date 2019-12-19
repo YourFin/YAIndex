@@ -52,8 +52,9 @@ notFoundView =
                     [ div [ class "column is-5-tablet is-4-desktop is-3-widescreen" ]
                         []
                     , div [ class "column" ]
-                        [ text "Uh oh. There isn't anything here. "
-                        , Routing.toLink Routing.rootRoute "Go Home"
+                        [ h1 [ class "title is-1 is-centered" ] [ text "Not found :(" ]
+                        , h1 [ class "subtitle is-3 is-centered" ]
+                            [ text "This page doesn't exist" ]
                         ]
                     ]
                 ]
