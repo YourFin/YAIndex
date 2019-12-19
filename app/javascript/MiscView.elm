@@ -11,7 +11,9 @@ navbar =
     nav [ class "navbar has-shadow is-primary", role "navigation", ariaLabel "main navigation" ]
         [ div [ class "navbar-brand" ]
             [ a [ class "navbar-item", Routing.toHref Routing.rootRoute ]
-                [ h1 [] [ text "Browser" ] ]
+                [ h1 [] [ strong [] [ text "Browser" ] ] ]
+            , a [ class "navbar-item", href "/requests/" ]
+                [ h1 [] [ text "Requests" ] ]
             ]
         ]
 
