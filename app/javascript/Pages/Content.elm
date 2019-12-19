@@ -5,13 +5,14 @@ import Dict
 import FileTree exposing (FileNode(..))
 import Filesize
 import Html exposing (..)
-import Html.Attributes exposing (class, href, id, style)
+import Html.Attributes as Attr exposing (class, href, id, style)
 import List
 import List.Nonempty as NE exposing (Nonempty(..))
 import ListUtils as LU
 import ListUtils.Nonempty as NEU
 import Maybe exposing (Maybe(..))
 import MiscView exposing (ariaHidden, ariaLabel)
+import Regex as Re
 import Routing exposing (Route(..))
 import Time
 import Url
@@ -126,6 +127,13 @@ renderFiles zone files contentId query =
 
         thisItemName =
             Maybe.withDefault "/" (LU.last contentId)
+
+        isImage =
+            [ "\\.jpg$", "\\.jpeg", "\\.png$", "\\.gif$" ]
+                |> List.map Re.fromString
+                |> List.map (Maybe.withDefault Re.never)
+                |> List.map (\pat -> Re.contains pat thisItemName)
+                |> List.foldl (||) False
     in
     case files of
         Folder folder ->
@@ -221,13 +229,23 @@ renderFiles zone files contentId query =
 
                 --, div [ class "buttons" ] [] - for multiple buttons
                 , a [ Routing.contentIdRawHref contentId ]
-                    [ button
-                        [ class "button is-link" ]
-                        [ span [] [ text "Open" ]
-                        , span [ class "icon is-small", ariaHidden ]
-                            [ i [ class "fas fa-chevron-circle-down" ] [] ]
+                    (if isImage then
+                        [ img
+                            [ Attr.src <| Routing.contentIdRawUrl contentId
+                            , Attr.alt thisItemName
+                            ]
+                            []
                         ]
-                    ]
+
+                     else
+                        [ button
+                            [ class "button is-link" ]
+                            [ span [] [ text "Open" ]
+                            , span [ class "icon is-small", ariaHidden ]
+                                [ i [ class "fas fa-chevron-circle-down" ] [] ]
+                            ]
+                        ]
+                    )
                 ]
 
 

@@ -1,4 +1,4 @@
-module Routing exposing (ContentId, Route(..), contentIdRawHref, isElmUrl, parseUrl, rootRoute, show, toHref, toLink, toUrlString)
+module Routing exposing (ContentId, Route(..), contentIdRawHref, contentIdRawUrl, isElmUrl, parseUrl, rootRoute, show, toHref, toLink, toUrlString)
 
 import Html exposing (Html)
 import Html.Attributes
@@ -155,13 +155,18 @@ toLink route text =
         [ Html.text text ]
 
 
+contentIdRawUrl : ContentId -> String
+contentIdRawUrl path =
+    Url.Builder.absolute
+        ([ "raw" ] ++ List.map Url.percentEncode path)
+        []
+
+
 contentIdRawHref : ContentId -> Html.Attribute msg
 contentIdRawHref path =
     let
         link =
-            Url.Builder.absolute
-                ([ "raw" ] ++ List.map Url.percentEncode path)
-                []
+            contentIdRawUrl path
     in
     Html.Attributes.href link
 
