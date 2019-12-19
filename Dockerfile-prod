@@ -26,7 +26,8 @@ RUN mkdir -p $APP_PATH
 COPY Gemfile ${APP_PATH}/Gemfile
 COPY Gemfile.lock ${APP_PATH}/Gemfile.lock
 WORKDIR ${APP_PATH}
-RUN bundle install
+RUN bundle config --global frozen 1
+RUN bundle install --without development test
 
 COPY package.json ${APP_PATH}/package.json
 COPY yarn.lock ${APP_PATH}/yarn.lock
@@ -34,7 +35,8 @@ RUN yarn install --check-files
 
 # Configure nginx
 RUN useradd -ms /bin/false nginx
-COPY nginx/nginx.conf /etc/nginx/nginx.conf
+# Explicitly remove default nginx.conf
+RUN rm /etc/nginx/nginx.conf
 
 # Copy entrypoint
 COPY bin/entrypoint.sh /usr/bin
@@ -44,7 +46,12 @@ RUN chmod +x /usr/bin/entrypoint.sh
 COPY . ${APP_PATH}
 
 # Build application files
-RUN FILES_DIRECTORY="/app/test_files/" bundle exec rake assets:precompile
+# Hopefull get around elm's annoying proclivity to not download everything
+RUN bash -c "yarn run elm make /app/app/javascript/Main.elm --output=/dev/null 2>/dev/null || true"
+RUN bash -c "yarn run elm make /app/app/javascript/Main.elm --output=/dev/null 2>/dev/null || true"
+RUN bash -c "yarn run elm make /app/app/javascript/Main.elm --output=/dev/null 2>/dev/null || true"
+RUN bash -c "yarn run elm make /app/app/javascript/Main.elm --output=/dev/null 2>/dev/null || true"
+RUN SECRET_KEY_BASE=`bin/rake secret` FILES_DIRECTORY="/app/test_files/" bundle exec rake assets:precompile
 
 ENTRYPOINT ["entrypoint.sh"]
 EXPOSE 80
