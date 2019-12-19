@@ -16,6 +16,8 @@ module Browser
     # -- all .rb files in that directory are automatically loaded after loading
     # the framework and any gems in your application.
 
+    config.hosts = nil
+
     config.generators do |g|
       g.stylesheets false
       g.assets false
