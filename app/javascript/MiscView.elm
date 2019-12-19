@@ -41,3 +41,22 @@ ariaHidden =
 dataTarget : String -> Attribute msg
 dataTarget =
     attribute "data-target"
+
+
+notFoundView : List (Html msg)
+notFoundView =
+    [ section [ class "hero is-fullheight" ]
+        [ div [ class "hero-body" ]
+            [ div [ class "container" ]
+                [ div [ class "columns is-centered" ]
+                    [ div [ class "column is-5-tablet is-4-desktop is-3-widescreen" ]
+                        []
+                    , div [ class "column" ]
+                        [ text "Uh oh. There isn't anything here. "
+                        , Routing.toLink Routing.rootRoute "Go Home"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    ]
