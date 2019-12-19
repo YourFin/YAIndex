@@ -5,8 +5,8 @@
     </div>
     <%= form_with scope: :request, url: requests_path, local: true do |form| %>
       <div class="field">
-        <%= form.label :text, class: "label" %>
         <div class="control">
+          <%= form.label :body, class: "label" %>
           <%= form.text_area :body,
               placeholder: "It would be really nice to have more cat pictures!",
               class: "textarea",
