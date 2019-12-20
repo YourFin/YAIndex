@@ -19,9 +19,13 @@ TODO, but the gist is that you want to bind mount the folder you want to view to
 
 Currently this application works by running nginx _inside_ the same container as rails, and then reverse proxying all requests to rails except for `/raw/`, which is aliased to the `test_files` directory to serve files directory.
 
-The frontend is written in elm (see [/app/javascript](/app/javascript)), with rails acting as an api.
+The frontend is written in elm (see [./app/javascript](/app/javascript)), with rails acting as an api.
 
-The current [production dockerfile](/Dockerfile-prod) includes debugging support for heroku, I'll pull this support
+Styling is done with [Bulma](https://bulma.io/), and can be found in [app/javascript/styles](./app/javascript/styles)
+
+The current [production dockerfile](/Dockerfile-prod) includes debugging support for heroku; I'll pull this support by adding a separate dockerfile once this is target at being deployable for arbitrary directories.
+
+The sample images were taken from unsplash, which provides them royalty free.
 
 # Linting
 Run `docker-compose run rails bin/lint.sh`.
@@ -32,3 +36,6 @@ Help is available with `docker-compose run rails bin/lint.sh --help`
 Run `docker-compose run rails bin/test.sh`
 
 Help is available with `docker-compose run rails bin/test.sh --help`
+
+Tests for rails can be found in the [test](./test) directory, while tests for elm can be found in [app/javascript/Tests](./app/javascript/Tests).
+The above script automatically runs both.
