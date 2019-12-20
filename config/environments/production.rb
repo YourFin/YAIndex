@@ -86,6 +86,9 @@ Rails.application.configure do
     config.logger    = ActiveSupport::TaggedLogging.new(logger)
   end
 
+  # SECURITY HOLE: FIX IF WE CARE AT ALL ABOUT ANY DATA ACCESSIBLE TO ANY BROWSER
+  config.action_controller.forgery_protection_origin_check = false
+
   # Do not dump schema after migrations.
   config.active_record.dump_schema_after_migration = false
 
