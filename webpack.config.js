@@ -21,6 +21,8 @@ Running in ${prod ? "production" : "development"} mode.
     devServer: prod ? {} : {
       contentBase: './dist',
       hot: true,
+      historyApiFallback: true, // Allows serving webapp at all paths
+      //disableHostCheck: true,
     },
     entry: './src/index.js',
     plugins: [
