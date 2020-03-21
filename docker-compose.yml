@@ -2,7 +2,7 @@ version: '3'
 services:
   webpack:
     build: .
-    command: ./bin/run-dev.sh
+    command: /app/bin/run-dev.sh
     volumes:
       - .:/app:Z
       - /app/node_modules # Fix yarn issues

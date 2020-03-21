@@ -3,19 +3,23 @@ FROM ubuntu:eoan
 # cd into /app
 ENV APP_PATH=/app
 
+#Install nginx
+RUN apt-get update
+RUN apt-get install -y nginx curl
+
 # Install nodejs 13
-RUN curl -sL https://deb.nodesource.com/setup_13.x | sudo -E bash - && \
+RUN curl -sL https://deb.nodesource.com/setup_13.x | bash - && \
   apt-get install -y nodejs
 
-#Install nginx
-RUN apt-get install -y nginx
 
 # Install yarn
 RUN npm install --global pnpm
 
+WORKDIR ${APP_PATH}
+
 COPY package.json ${APP_PATH}/package.json
-COPY pnpm-lock.yaml ${APP_PATH}/yarn.lock
-RUN pnpm install
+COPY pnpm-lock.yaml ${APP_PATH}/pnpm-lock.yaml
+RUN pnpm install --frozen-lockfile
 
 # Copy over entrypoint
 COPY bin/entrypoint.sh /usr/bin
