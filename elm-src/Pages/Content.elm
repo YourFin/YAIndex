@@ -166,10 +166,10 @@ renderFiles zone files contentId query =
                                 icon =
                                     case node of
                                         File _ ->
-                                            i [ class "fas fa-file", ariaLabel "File" ] []
+                                            i [ class "fa fa-file", ariaLabel "File" ] []
 
                                         Folder _ ->
-                                            i [ class "fas fa-folder", ariaLabel "Folder" ] []
+                                            i [ class "fa fa-folder", ariaLabel "Folder" ] []
                             in
                             tr []
                                 [ td []
@@ -242,7 +242,7 @@ renderFiles zone files contentId query =
                             [ class "button is-link" ]
                             [ span [] [ text "Open" ]
                             , span [ class "icon is-small", ariaHidden ]
-                                [ i [ class "fas fa-chevron-circle-down" ] [] ]
+                                [ i [ class "fa fa-chevron-circle-down" ] [] ]
                             ]
                         ]
                     )
