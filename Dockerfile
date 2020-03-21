@@ -23,7 +23,7 @@ RUN chmod +x /usr/bin/entrypoint.sh
 
 # Configure nginx
 RUN useradd -ms /bin/false nginx
-RUN ln -sf ${APP_PATH}/nginx/nginx.conf /etc/nginx/nginx.conf
+RUN ln -sf ${APP_PATH}/nginx/nginx-dev.conf /etc/nginx/nginx.conf
 
 # Copy application files
 COPY . ${APP_PATH}
