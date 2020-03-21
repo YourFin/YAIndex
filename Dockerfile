@@ -1,34 +1,21 @@
-FROM ruby:2.6.4
+FROM ubuntu:eoan
 
-ENV RAILS_ON_DOCKER=yes
+# cd into /app
+ENV APP_PATH=/app
 
-# Install nodejs 11
-RUN curl -sL https://deb.nodesource.com/setup_11.x | bash - && \
+# Install nodejs 13
+RUN curl -sL https://deb.nodesource.com/setup_13.x | sudo -E bash - && \
   apt-get install -y nodejs
-RUN apt-get install -y parallel
-RUN echo "will cite\n" | parallel --citation &>/dev/null # Tell parallel that we will,
-                                                         # in fact, cite it if we use
-  # it in an academic publication
 
 #Install nginx
 RUN apt-get install -y nginx
 
 # Install yarn
-RUN npm install --global yarn
-
-# cd into /app
-ENV APP_PATH=/app
-
-# Install gems
-RUN mkdir -p $APP_PATH
-COPY Gemfile ${APP_PATH}/Gemfile
-COPY Gemfile.lock ${APP_PATH}/Gemfile.lock
-WORKDIR ${APP_PATH}
-RUN bundle install
+RUN npm install --global pnpm
 
 COPY package.json ${APP_PATH}/package.json
-COPY yarn.lock ${APP_PATH}/yarn.lock
-RUN yarn install --check-files
+COPY pnpm-lock.yaml ${APP_PATH}/yarn.lock
+RUN pnpm install
 
 # Copy over entrypoint
 COPY bin/entrypoint.sh /usr/bin
@@ -42,9 +29,9 @@ RUN ln -sf ${APP_PATH}/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY . ${APP_PATH}
 
 # Attempt to build elm packages to pull in dependencies
-RUN bash -c "yarn run elm make /app/javascript/Main.elm --output=/dev/null 2>/dev/null || true"
+RUN bash -c "${APP_PATH}/node_modules/elm/bin/elm make /app/javascript/Main.elm --output=/dev/null 2>/dev/null || true"
 
 ENTRYPOINT ["entrypoint.sh"]
-EXPOSE 80
+EXPOSE 3000
 
 CMD ["./bin/run-dev.sh"]
