@@ -1,2 +1,2 @@
 import '../styles/main.scss';
-import '@fortawesome/fontawesome-free/scss/fontawesome.scss';
+import 'font-awesome/scss/font-awesome.scss';
