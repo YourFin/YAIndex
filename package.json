@@ -12,7 +12,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "bulma": "^0.8.0",
-    "@fortawesome/fontawesome-free": "^4.7.0",
+    "@fortawesome/fontawesome-free": "^5.12.1",
     "node-sass": "^4.13.1",
     "plyr": "^3.5.10"
   },

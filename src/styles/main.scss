@@ -4,10 +4,10 @@
 $fullhd-enabled: true;
 $primary: $grey-darker;
 
-$fa-font-path: '~font-awesome/fonts';
-@import 'font-awesome/scss/font-awesome';
+$fa-font-path: '~@fortawesome/fontawesome-free/webfonts';
+@import '@fortawesome/fontawesome-free/scss/fontawesome';
 /*@import '~@fortawesome/fontawesome-free/scss/regular';*/
-/*@import '~font-awesome/scss/solid';*/
+@import '@fortawesome/fontawesome-free/scss/solid';
 @import 'bulma';
 
 .breadcrumb-section {
