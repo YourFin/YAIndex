@@ -22,6 +22,35 @@ type Route
     | LoginRoute Route
 
 
+
+{- Logic for parsing raw urls, might be useful later to parse raw routes and
+   rework content
+
+
+      |> Url.fromString
+      |> Maybe.map .path
+      |> Maybe.map (String.split "/")
+      |> Maybe.map (List.map Url.percentDecode)
+      |> Maybe.andThen
+          -- Checks for any Nothings in the list
+          (List.foldl
+              (\val prevMList ->
+                  case val of
+                      Nothing ->
+                          Nothing
+
+                      Just val_ ->
+                          Maybe.map
+                              ((::) val_)
+                              prevMList
+              )
+              (Just [])
+          )
+      |> Maybe.map (List.filter ((==) ""))
+      |> Maybe.andThen List.tail
+-}
+
+
 rootRoute : Route
 rootRoute =
     ContentRoute [] Maybe.Nothing
