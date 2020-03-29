@@ -21,7 +21,7 @@ getMetadata toMsg location =
         , headers = []
         , url = Routing.contentIdRawUrl location
         , body = Http.emptyBody
-        , expect = expectMetadata toMsg
+        , expect = expectMetadata location toMsg
         , timeout = Nothing
         , tracker = Nothing
         }
@@ -34,8 +34,8 @@ type HeaderError
 
 type MetadataResult
     = ApplicationException String -- Message as to what the fuck happened
-    | Retry String -- Message as to what happened
-    | Inaccessable String String -- Returns statusText, url
+    | Retry ContentId -- Message as to what happened
+    | Inaccessable String ContentId -- Returns statusText, url
     | IsFolder ContentId
     | IsFile
         { contentId : ContentId
@@ -45,8 +45,8 @@ type MetadataResult
         }
 
 
-expectMetadata : (Result () MetadataResult -> msg) -> Expect msg
-expectMetadata toMsg =
+expectMetadata : ContentId -> (Result () MetadataResult -> msg) -> Expect msg
+expectMetadata contentId toMsg =
     Http.expectBytesResponse toMsg <|
         \response ->
             Ok
@@ -55,63 +55,29 @@ expectMetadata toMsg =
                         ApplicationException ("Url: \"" ++ url ++ "\" was bad when trying to send head request.")
 
                     Http.Timeout_ ->
-                        Retry "Timeout"
+                        Retry contentId
 
                     Http.NetworkError_ ->
-                        Retry "Network Error"
+                        Retry contentId
 
                     Http.BadStatus_ metadata _ ->
-                        Inaccessable metadata.statusText metadata.url
+                        Inaccessable metadata.statusText contentId
 
                     Http.GoodStatus_ metadata _ ->
-                        let
-                            maybeContentId =
-                                metadata.url
-                                    |> Url.fromString
-                                    |> Maybe.map .path
-                                    |> Maybe.map (String.split "/")
-                                    |> Maybe.map (List.map Url.percentDecode)
-                                    |> Maybe.andThen
-                                        -- Checks for any Nothings in the list
-                                        (List.foldl
-                                            (\val prevMList ->
-                                                case val of
-                                                    Nothing ->
-                                                        Nothing
+                        if isFolder metadata.url then
+                            IsFolder contentId
 
-                                                    Just val_ ->
-                                                        Maybe.map
-                                                            ((::) val_)
-                                                            prevMList
-                                            )
-                                            (Just [])
-                                        )
-                                    |> Maybe.map (List.filter ((==) ""))
-                                    |> Maybe.andThen List.tail
-                        in
-                        case maybeContentId of
-                            Nothing ->
-                                ApplicationException
-                                    ("Could not parse raw url\""
-                                        ++ metadata.url
-                                        ++ "\" during head request metadata parse."
-                                    )
-
-                            Just contentId ->
-                                if isFolder metadata.url then
-                                    IsFolder contentId
-
-                                else
-                                    let
-                                        parsed =
-                                            parseFileHeaders metadata.headers
-                                    in
-                                    IsFile
-                                        { modified = parsed.modified
-                                        , contentType = parsed.contentType
-                                        , size = parsed.contentLength
-                                        , contentId = contentId
-                                        }
+                        else
+                            let
+                                parsed =
+                                    parseFileHeaders metadata.headers
+                            in
+                            IsFile
+                                { modified = parsed.modified
+                                , contentType = parsed.contentType
+                                , size = parsed.contentLength
+                                , contentId = contentId
+                                }
                 )
 
 
