@@ -14,7 +14,6 @@ import Result exposing (Result(..))
 import Routing exposing (ContentId)
 import String
 import Time
-import Url
 
 
 type alias FileTree =
