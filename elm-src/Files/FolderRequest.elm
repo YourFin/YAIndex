@@ -1,23 +1,24 @@
 module Files.FolderRequest exposing (..)
 
+import ContentId exposing (ContentId)
 import ContentType exposing (ContentType)
 import Dict exposing (Dict)
-import Files exposing (Inode(..))
+import Files exposing (InputInode(..))
 import Http
 import Json.Decode as JDecode
 import Result exposing (Result(..))
-import Routing exposing (ContentId, contentIdRawUrl)
+import Routing exposing (contentIdRawUrl)
 
 
-retrieveFolder : (Result Http.Error FileTree -> msg) -> ContentId -> Cmd msg
+retrieveFolder : (ContentId -> Result Http.Error InputInode -> msg) -> ContentId -> Cmd msg
 retrieveFolder toMsg path =
     Http.get
         { url = contentIdRawUrl path
-        , expect = Http.expectJson toMsg folderDecoder
+        , expect = Http.expectJson (toMsg path) folderDecoder
         }
 
 
-folderDecoder : JDecode.Decoder FileTree
+folderDecoder : JDecode.Decoder InputInode
 folderDecoder =
     JDecode.oneOf
         [ assertField "type" "directory" folderEntryDecoder
@@ -25,16 +26,17 @@ folderDecoder =
         ]
         |> JDecode.list
         |> JDecode.map Dict.fromList
+        |> JDecode.map (ExploredFolder Nothing)
 
 
-folderEntryDecoder : JDecode.Decoder ( String, FileNode )
+folderEntryDecoder : JDecode.Decoder ( String, InputInode )
 folderEntryDecoder =
-    JDecode.map2 (\name mtime -> ( name, Folder (Just mtime) Dict.empty ))
+    JDecode.map2 (\name mtime -> ( name, UnexploredFolder mtime ))
         (JDecode.field "name" JDecode.string)
         (JDecode.field "mtime" JDecode.string)
 
 
-fileEntryDecoder : JDecode.Decoder ( String, FileNode )
+fileEntryDecoder : JDecode.Decoder ( String, InputInode )
 fileEntryDecoder =
     JDecode.map3 fileEntry
         (JDecode.field "name" JDecode.string)
@@ -42,19 +44,18 @@ fileEntryDecoder =
         (JDecode.field "size" JDecode.int)
 
 
-fileEntry : String -> String -> Int -> ( String, FileNode )
+fileEntry : String -> String -> Int -> ( String, InputInode )
 fileEntry name mtime size =
     let
         contentType =
             ContentType.parse Nothing name
     in
     ( name
-    , File
+    , InputFile
         { contentType = contentType
         , size = size
         , modified = mtime
         }
-        Dict.empty
     )
 
 
