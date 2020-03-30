@@ -4,7 +4,6 @@ module Files exposing
     , InputInode(..)
     , RetrivalError(..)
     , at
-    , childrenOf
     , insertAt
     , markInaccessable
     , none
@@ -15,7 +14,6 @@ import ContentType exposing (ContentType)
 import Dict exposing (Dict)
 import List.Nonempty exposing (Nonempty(..))
 import Result exposing (Result(..))
-import Routing exposing (Path)
 
 
 
@@ -38,7 +36,7 @@ be accessed through the various functions exposed in this module.
 
 -}
 type Files
-    = Files FileTree_
+    = Files FileNode_
 
 
 type InputInode
@@ -67,7 +65,7 @@ Primarily use is in "init" in main
 -}
 none : Files
 none =
-    Files Dict.empty
+    Files (Placeholder_ Dict.empty)
 
 
 {-| Get the Inode at a given content id, if it's there.
@@ -75,45 +73,18 @@ none =
 at : ContentId -> Files -> Result RetrivalError Inode
 at contentId files =
     let
-        fileTree =
-            filesToTree files
-
-        kernel : ContentId -> FileTree_ -> Result RetrivalError Inode
-        kernel contentId_ tree =
+        kernel : ContentId -> FileNode_ -> Result RetrivalError Inode
+        kernel contentId_ node =
             case contentId_ of
-                Nonempty fname [] ->
-                    Dict.get fname tree
-                        |> Maybe.map fileNodeToInode
-                        |> Maybe.withDefault (Err Unknown)
+                [] ->
+                    fileNodeToInode node
 
-                Nonempty fname (first :: rest) ->
-                    Dict.get fname tree
+                fname :: rest ->
+                    Dict.get fname (fNodeChildren node)
                         |> Maybe.withDefault (Placeholder_ Dict.empty)
-                        |> fNodeChildren
-                        |> kernel (Nonempty first rest)
+                        |> kernel rest
     in
-    kernel contentId (filesToTree files)
-
-
-childrenOf : Path -> Files -> Result RetrivalError (Dict String Inode)
-childrenOf path files =
-    let
-        fileTree =
-            filesToTree files
-
-        kernel : Path -> Maybe FileTree_ -> Result RetrivalError (Dict String Inode)
-        kernel path_ tree =
-            case ( path_, tree ) of
-                ( _, Nothing ) ->
-                    Err Unknown
-
-                ( [], Just tree_ ) ->
-                    Ok <| fileTreeToInodes tree_
-
-                ( fname :: rest, Just tree_ ) ->
-                    kernel rest (Maybe.map fNodeChildren (Dict.get fname tree_))
-    in
-    kernel path (Just fileTree)
+    kernel contentId (filesToNode files)
 
 
 {-| Insert an Inode at a given ContentId.
@@ -124,14 +95,14 @@ insertAt iinode contentId =
         fileNode =
             iinodeToFileNode iinode
     in
-    mapTree (insertNode contentId fileNode)
+    mapNode (insertNode contentId fileNode)
 
 
 {-| Mark a given ContentId as inaccessable (i.e. returned a 40x).
 -}
 markInaccessable : ContentId -> Files -> Files
 markInaccessable contentId =
-    mapTree (insertNode contentId <| Inaccessable_ Dict.empty)
+    mapNode (insertNode contentId <| Inaccessable_ Dict.empty)
 
 
 {-| Error type returned by at.
@@ -166,26 +137,6 @@ fNodeChildren node =
             children
 
 
-fileNodeToInode : FileNode_ -> Result RetrivalError Inode
-fileNodeToInode node =
-    case node of
-        File_ info _ ->
-            Ok <| File info
-
-        Folder_ mtime children ->
-            Ok <| Folder mtime <| fileTreeToInodes children
-
-        Inaccessable_ _ ->
-            Err Inaccessable
-
-        Placeholder_ _ ->
-            Err Unknown
-
-        Suspected_ _ _ ->
-            -- This right here is /why/ we have the suspected type
-            Err Unknown
-
-
 inodeToFileNode : Inode -> FileNode_
 inodeToFileNode inode =
     case inode of
@@ -209,16 +160,36 @@ iinodeToFileNode inode =
             Folder_ (Just mtime) Dict.empty
 
 
-filesToTree : Files -> FileTree_
-filesToTree files =
+fileNodeToInode : FileNode_ -> Result RetrivalError Inode
+fileNodeToInode node =
+    case node of
+        File_ info _ ->
+            Ok <| File info
+
+        Folder_ mtime children ->
+            Ok <| Folder mtime <| fileTreeToInodes children
+
+        Inaccessable_ _ ->
+            Err Inaccessable
+
+        Placeholder_ _ ->
+            Err Unknown
+
+        Suspected_ _ _ ->
+            -- This right here is /why/ we have the suspected type
+            Err Unknown
+
+
+filesToNode : Files -> FileNode_
+filesToNode files =
     case files of
-        Files tree ->
-            tree
+        Files node ->
+            node
 
 
-mapTree : (FileTree_ -> FileTree_) -> Files -> Files
-mapTree f =
-    filesToTree >> f >> Files
+mapNode : (FileNode_ -> FileNode_) -> Files -> Files
+mapNode f =
+    filesToNode >> f >> Files
 
 
 fileTreeToInodes : FileTree_ -> Dict String Inode
@@ -274,12 +245,12 @@ type alias FileTree_ =
     Dict String FileNode_
 
 
-insertNode : ContentId -> FileNode_ -> FileTree_ -> FileTree_
-insertNode contentId toInsert oldTree =
-    mergeInTree oldTree (withParents contentId toInsert)
+insertNode : ContentId -> FileNode_ -> FileNode_ -> FileNode_
+insertNode contentId toInsert oldRoot =
+    mergeNodes oldRoot (withParents contentId toInsert)
 
 
-withParents : ContentId -> FileNode_ -> FileTree_
+withParents : ContentId -> FileNode_ -> FileNode_
 withParents contentId child =
     let
         parentBuilder : FileTree_ -> FileNode_
@@ -302,14 +273,11 @@ withParents contentId child =
 
         kernel contentId_ =
             case contentId_ of
-                Nonempty fname [] ->
-                    Dict.singleton fname child
+                [] ->
+                    child
 
-                Nonempty fname (first :: rest) ->
-                    Nonempty first rest
-                        |> kernel
-                        |> parentBuilder
-                        |> Dict.singleton fname
+                fname :: rest ->
+                    parentBuilder <| Dict.singleton fname <| kernel rest
     in
     kernel contentId
 
@@ -320,147 +288,129 @@ withParents contentId child =
 ----
 
 
-{-| Merge two FileTrees, with precidence given to the SECOND one.
+mergeNodes : FileNode_ -> FileNode_ -> FileNode_
+mergeNodes oldNode newNode =
+    case ( oldNode, newNode ) of
+        --- New File
+        ( File_ _ oldChildren, File_ info newChildren ) ->
+            File_ info <|
+                mergeInaccessableTrees
+                    -- Seperate recusion branch
+                    oldChildren
+                    newChildren
 
-Note: the meat of this is defined in the (unexported) function inBoth, which is
-where you want to start to try and understand why trees merge the way they do
+        ( Folder_ _ oldChildren, File_ info newChildren ) ->
+            File_ info <|
+                mergeInaccessableTrees
+                    -- Seperate recusion branch
+                    oldChildren
+                    newChildren
 
--}
-mergeInTree : FileTree_ -> FileTree_ -> FileTree_
-mergeInTree old new =
-    Dict.merge Dict.insert inBoth Dict.insert old new Dict.empty
+        ( Inaccessable_ oldChildren, File_ info newChildren ) ->
+            File_ info <|
+                mergeInaccessableTrees
+                    -- Seperate recusion branch
+                    oldChildren
+                    newChildren
 
+        ( Placeholder_ oldChildren, File_ info newChildren ) ->
+            File_ info <|
+                mergeInaccessableTrees
+                    -- Seperate recusion branch
+                    oldChildren
+                    newChildren
 
-{-| Mutually recursive with mergeInTree, contains all the logic for merging
-key collisions (where both the old and new tree share a key).
--}
-inBoth : String -> FileNode_ -> FileNode_ -> FileTree_ -> FileTree_
-inBoth key oldVal newVal soFar =
-    let
-        mergedNode =
-            case ( oldVal, newVal ) of
-                --- New File
-                ( File_ _ oldChildren, File_ info newChildren ) ->
-                    File_ info <|
-                        mergeInaccessableTrees
-                            -- Seperate recusion branch
-                            oldChildren
-                            newChildren
+        ( Suspected_ _ oldChildren, File_ info newChildren ) ->
+            File_ info <|
+                mergeInaccessableTrees
+                    -- Seperate recusion branch
+                    oldChildren
+                    newChildren
 
-                ( Folder_ _ oldChildren, File_ info newChildren ) ->
-                    File_ info <|
-                        mergeInaccessableTrees
-                            -- Seperate recusion branch
-                            oldChildren
-                            newChildren
+        --- New Folder
+        ( Folder_ oldMtime oldChildren, Folder_ newMtime newChildren ) ->
+            Folder_
+                (mergeMaybe oldMtime newMtime)
+                (mergeInTree oldChildren newChildren)
 
-                ( Inaccessable_ oldChildren, File_ info newChildren ) ->
-                    File_ info <|
-                        mergeInaccessableTrees
-                            -- Seperate recusion branch
-                            oldChildren
-                            newChildren
+        ( Suspected_ oldMtime oldChildren, Folder_ newMtime newChildren ) ->
+            Folder_
+                (mergeMaybe oldMtime newMtime)
+                (mergeInTree oldChildren newChildren)
 
-                ( Placeholder_ oldChildren, File_ info newChildren ) ->
-                    File_ info <|
-                        mergeInaccessableTrees
-                            -- Seperate recusion branch
-                            oldChildren
-                            newChildren
+        ( Placeholder_ oldChildren, Folder_ newMtime newChildren ) ->
+            Folder_ newMtime (mergeInTree oldChildren newChildren)
 
-                ( Suspected_ _ oldChildren, File_ info newChildren ) ->
-                    File_ info <|
-                        mergeInaccessableTrees
-                            -- Seperate recusion branch
-                            oldChildren
-                            newChildren
+        ( Inaccessable_ _, Folder_ newMtime newChildren ) ->
+            -- If we see a new folder, it sorta makes sense to clober
+            -- the inaccessable cache
+            Folder_ newMtime newChildren
 
-                --- New Folder
-                ( Folder_ oldMtime oldChildren, Folder_ newMtime newChildren ) ->
-                    Folder_
-                        (mergeMaybe oldMtime newMtime)
-                        (mergeInTree oldChildren newChildren)
+        ( File_ _ oldChildren, Folder_ mtime newChildren ) ->
+            -- If we see a new folder, it sorta makes sense to clober
+            -- the inaccessable cache
+            Folder_ mtime newChildren
 
-                ( Suspected_ oldMtime oldChildren, Folder_ newMtime newChildren ) ->
-                    Folder_
-                        (mergeMaybe oldMtime newMtime)
-                        (mergeInTree oldChildren newChildren)
+        --- New Inaccessable
+        ( Inaccessable_ oldChildren, Inaccessable_ newChildren ) ->
+            Inaccessable_ <|
+                mergeInaccessableTrees
+                    -- Seperate recusion branch
+                    oldChildren
+                    newChildren
 
-                ( Placeholder_ oldChildren, Folder_ newMtime newChildren ) ->
-                    Folder_ newMtime (mergeInTree oldChildren newChildren)
+        ( Placeholder_ oldChildren, Inaccessable_ newChildren ) ->
+            Inaccessable_ <|
+                mergeInaccessableTrees
+                    oldChildren
+                    newChildren
 
-                ( Inaccessable_ _, Folder_ newMtime newChildren ) ->
-                    -- If we see a new folder, it sorta makes sense to clober
-                    -- the inaccessable cache
-                    Folder_ newMtime newChildren
+        ( File_ _ oldChildren, Inaccessable_ newChildren ) ->
+            Inaccessable_ <|
+                mergeInaccessableTrees
+                    oldChildren
+                    newChildren
 
-                ( File_ _ oldChildren, Folder_ mtime newChildren ) ->
-                    -- If we see a new folder, it sorta makes sense to clober
-                    -- the inaccessable cache
-                    Folder_ mtime newChildren
+        ( _, Inaccessable_ newChildren ) ->
+            -- If it's supected or a folder, we have a pretty good idea
+            -- that most of the children are now invalid
+            Inaccessable_ newChildren
 
-                --- New Inaccessable
-                ( Inaccessable_ oldChildren, Inaccessable_ newChildren ) ->
-                    Inaccessable_ <|
-                        mergeInaccessableTrees
-                            -- Seperate recusion branch
-                            oldChildren
-                            newChildren
+        -- New Placeholder
+        ( File_ info oldChildren, Placeholder_ newChildren ) ->
+            File_ info <| mergeInaccessableTrees oldChildren newChildren
 
-                ( Placeholder_ oldChildren, Inaccessable_ newChildren ) ->
-                    Inaccessable_ <|
-                        mergeInaccessableTrees
-                            oldChildren
-                            newChildren
+        ( Folder_ mtime oldChildren, Placeholder_ newChildren ) ->
+            Folder_ mtime <| mergeInTree oldChildren newChildren
 
-                ( File_ _ oldChildren, Inaccessable_ newChildren ) ->
-                    Inaccessable_ <|
-                        mergeInaccessableTrees
-                            oldChildren
-                            newChildren
+        ( Inaccessable_ oldChildren, Placeholder_ newChildren ) ->
+            Inaccessable_ <| mergeInaccessableTrees oldChildren newChildren
 
-                ( _, Inaccessable_ newChildren ) ->
-                    -- If it's supected or a folder, we have a pretty good idea
-                    -- that most of the children are now invalid
-                    Inaccessable_ newChildren
+        ( Placeholder_ oldChildren, Placeholder_ newChildren ) ->
+            Placeholder_ <| mergeInTree oldChildren newChildren
 
-                -- New Placeholder
-                ( File_ info oldChildren, Placeholder_ newChildren ) ->
-                    File_ info <| mergeInaccessableTrees oldChildren newChildren
+        ( Suspected_ mtime oldChildren, Placeholder_ newChildren ) ->
+            Suspected_ mtime <| mergeInTree oldChildren newChildren
 
-                ( Folder_ mtime oldChildren, Placeholder_ newChildren ) ->
-                    Folder_ mtime <| mergeInTree oldChildren newChildren
+        --- New suspected
+        ( File_ _ oldChildren, Suspected_ mtime newChildren ) ->
+            Suspected_ mtime <| mergeInTree oldChildren newChildren
 
-                ( Inaccessable_ oldChildren, Placeholder_ newChildren ) ->
-                    Inaccessable_ <| mergeInaccessableTrees oldChildren newChildren
+        ( Folder_ oldMtime oldChildren, Suspected_ newMtime newChildren ) ->
+            Folder_
+                (mergeMaybe oldMtime newMtime)
+                (mergeInTree oldChildren newChildren)
 
-                ( Placeholder_ oldChildren, Placeholder_ newChildren ) ->
-                    Placeholder_ <| mergeInTree oldChildren newChildren
+        ( Inaccessable_ oldChildren, Suspected_ mtime newChildren ) ->
+            Suspected_ mtime <| mergeInTree oldChildren newChildren
 
-                ( Suspected_ mtime oldChildren, Placeholder_ newChildren ) ->
-                    Suspected_ mtime <| mergeInTree oldChildren newChildren
+        ( Placeholder_ oldChildren, Suspected_ mtime newChildren ) ->
+            Suspected_ mtime <| mergeInTree oldChildren newChildren
 
-                --- New suspected
-                ( File_ _ oldChildren, Suspected_ mtime newChildren ) ->
-                    Suspected_ mtime <| mergeInTree oldChildren newChildren
-
-                ( Folder_ oldMtime oldChildren, Suspected_ newMtime newChildren ) ->
-                    Folder_
-                        (mergeMaybe oldMtime newMtime)
-                        (mergeInTree oldChildren newChildren)
-
-                ( Inaccessable_ oldChildren, Suspected_ mtime newChildren ) ->
-                    Suspected_ mtime <| mergeInTree oldChildren newChildren
-
-                ( Placeholder_ oldChildren, Suspected_ mtime newChildren ) ->
-                    Suspected_ mtime <| mergeInTree oldChildren newChildren
-
-                ( Suspected_ oldMtime oldChildren, Suspected_ newMtime newChildren ) ->
-                    Folder_
-                        (mergeMaybe oldMtime newMtime)
-                        (mergeInTree oldChildren newChildren)
-    in
-    Dict.insert key mergedNode soFar
+        ( Suspected_ oldMtime oldChildren, Suspected_ newMtime newChildren ) ->
+            Folder_
+                (mergeMaybe oldMtime newMtime)
+                (mergeInTree oldChildren newChildren)
 
 
 {-| If either of the arguments have a value, return it in the output.
@@ -477,6 +427,18 @@ mergeMaybe old new =
 
         ( Nothing, Nothing ) ->
             Nothing
+
+
+{-| Merge two FileTrees, with precidence given to the SECOND one.
+-}
+mergeInTree : FileTree_ -> FileTree_ -> FileTree_
+mergeInTree old new =
+    Dict.merge Dict.insert inBoth Dict.insert old new Dict.empty
+
+
+inBoth : String -> FileNode_ -> FileNode_ -> FileTree_ -> FileTree_
+inBoth key old new =
+    Dict.insert key <| mergeNodes old new
 
 
 {-| Merge two inaccessable trees.

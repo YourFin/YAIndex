@@ -8,40 +8,30 @@ import List.Nonempty as NE
 import Maybe exposing (Maybe(..))
 
 
-inv : Files -> List String -> Files
-inv files p =
-    case p of
-        [] ->
-            Debug.todo ""
-
-        first :: rest ->
-            markInaccessable (NE.Nonempty first rest) files
+inac : Files -> List String -> Files
+inac files p =
+    markInaccessable p files
 
 
-ins : Files -> List String -> Inode -> Files
+ins : Files -> List String -> InputInode -> Files
 ins files p i =
-    case p of
-        [] ->
-            Debug.todo "foo"
-
-        first :: rest ->
-            insertAt i (NE.Nonempty first rest) files
+    insertAt i p files
 
 
-fi : Inode
+fi : InputInode
 fi =
-    File
+    InputFile
         { contentType = ContentType.Unknown ""
         , size = 0
         , modified = ""
         }
 
 
-fo : Inode
+fo : InputInode
 fo =
-    Folder Nothing Dict.empty
+    UnexploredFolder ""
 
 
-fol : List ( String, Inode ) -> Inode
+fol : List ( String, InputInode ) -> InputInode
 fol lst =
-    Folder Nothing (Dict.fromList lst)
+    ExploredFolder Nothing (Dict.fromList lst)
