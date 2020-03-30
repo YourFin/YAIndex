@@ -288,6 +288,9 @@ withParents contentId child =
 ----
 
 
+{-| The meat of 'er
+TODO: Folders need to clobber nonexistant children upon insertion
+-}
 mergeNodes : FileNode_ -> FileNode_ -> FileNode_
 mergeNodes oldNode newNode =
     case ( oldNode, newNode ) of
