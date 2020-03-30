@@ -45,8 +45,8 @@ type InputInode
         , size : Int
         , modified : String
         }
-    | UnexploredFolder String
-    | ExploredFolder (Maybe String) (Dict String InputInode)
+    | UnexploredFolder String -- TODO: Make this a maybe
+    | ExploredFolder (Maybe String) (Dict String InputInode) -- TODO: remove Maybe
 
 
 type Inode
