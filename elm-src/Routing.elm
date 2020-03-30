@@ -1,5 +1,6 @@
-module Routing exposing (ContentId, Route(..), contentIdRawHref, contentIdRawUrl, isElmUrl, parseUrl, rootRoute, show, toHref, toLink, toUrlString)
+module Routing exposing (Route(..), contentIdRawHref, contentIdRawUrl, isElmUrl, parseUrl, rootRoute, show, toHref, toLink, toUrlString)
 
+import FileTree exposing (ContentId)
 import Html exposing (Html)
 import Html.Attributes
 import List
@@ -12,12 +13,9 @@ import Url.Parser exposing ((</>), (<?>), Parser, map, oneOf, s, string, top)
 import Url.Parser.Query as Query
 
 
-type alias ContentId =
-    List String
-
-
 type Route
     = ContentRoute ContentId (Maybe String)
+    | RootRoute (Maybe String)
     | PageNotFoundRoute
     | LoginRoute Route
 
@@ -49,11 +47,6 @@ type Route
       |> Maybe.map (List.filter ((==) ""))
       |> Maybe.andThen List.tail
 -}
-
-
-rootRoute : Route
-rootRoute =
-    ContentRoute [] Maybe.Nothing
 
 
 encodeContentId : ContentId -> String

@@ -1,7 +1,8 @@
-module RequestTree exposing (FileNode(..), FileTree, mergeMetadata)
+module RequestTree exposing (mergeMetadata)
 
 import ContentType exposing (ContentType)
 import Dict exposing (Dict)
+import FileTree exposing (FileNode(..), FileTree)
 import Http exposing (Expect)
 import List
 import ListUtils as ListU
@@ -16,99 +17,53 @@ import String
 import Time
 
 
-type alias FileTree =
-    Dict String FileNode
-
-
-type FileNode
-    = File
-        { contentType : ContentType
-        , size : Int
-        , modified : String
-        }
-    | Folder (Dict String FileNode)
-      -- Upon a 40x for a given ContentId
-    | Inaccessable FileTree
-      -- Tree branch inserted due to user request. Generally updated
-      -- to something else at the end of a request cycle. Visiting a
-      -- corresponding route will result in the loading screen.
-    | Placeholder FileTree
-      -- Suspected: Represents a path part we think exists, but haven't actually
-      -- visited. Could be a file or a folder.
-    | Suspected
-        -- Modified time, if it has one
-        -- TODO: Write a parser so this can be time.posix
-        (Maybe String)
-        -- Size, if it has one. Note that size should always be reset
-        -- with time
-        (Maybe Int)
-        -- Children (often none)
-        (Dict String FileNode)
-
-
-type alias CacheState =
-    Time.Posix
-
-
-mergeMetadata : (Result () MetadataResult -> msg) -> FileTree -> MetadataResult -> ( FileTree, Cmd msg )
-mergeMetadata toMsg prevTree metadata =
-    case metadata of
-        MetadataRetrival.ApplicationException msg ->
-            -- TODO: something more in this branch
-            ( prevTree, Cmd.none )
-
-        MetadataRetrival.Retry contentId ->
-            -- TODO: Retries
-            ( prevTree, Cmd.none )
-
-        MetadataRetrival.Inaccessable _ contentId ->
-            ( addInaccessable prevTree contentId, Cmd.none )
-
-        MetadataRetrival.IsFolder contentId ->
-            ( addFolder prevTree contentId, Cmd.none )
-
-        MetadataRetrival.IsFile info ->
-            ( addFile prevTree info, Cmd.none )
-
-
-addFolder : FileTree -> ContentId -> FileTree
-addFolder toMerge folder =
+mergeFolder : FileTree -> ContentId -> FileTree -> FileTree
+mergeFolder prevTree location newFolderChildren =
     let
         makeFolder prevNode =
             case prevNode of
-                Just (Suspected _ _ children) ->
-                    Folder children
+                Just (Suspected mtime _) ->
+                    Folder mtime newFolderChildren
 
-                Just (Folder children) ->
-                    Folder children
+                Just (Folder mtime _) ->
+                    Folder mtime newFolderChildren
 
-                Just (Placeholder children) ->
-                    Folder children
-
-                Just (File _) ->
-                    Folder Dict.empty
-
-                Nothing ->
-                    Folder Dict.empty
-
-                Just (Inaccessable children) ->
-                    -- Make the assumption that if it was previously
-                    -- inaccessable, we should wipe away the previous children
-                    Folder Dict.empty
+                _ ->
+                    Folder Nothing newFolderChildren
     in
     withMergeParents
-        (Suspected Nothing Nothing)
+        (Suspected Nothing)
         makeFolder
-        toMerge
-        folder
+        prevTree
+        location
 
 
-addInaccessable : FileTree -> ContentId -> FileTree
-addInaccessable =
-    withMergeParents Placeholder (\_ -> Inaccessable Dict.empty)
+{-| Takes in previous tree and a metadata result, and returns a new tree with
+the metadata results merged in and possibly a ContentId that should have folder
+data fetched.
+-}
+mergeMetadata : FileTree -> MetadataResult -> ( FileTree, Maybe ContentId )
+mergeMetadata prevTree metadata =
+    case metadata of
+        MetadataRetrival.ApplicationException msg ->
+            -- TODO: something more in this branch
+            ( prevTree, Nothing )
+
+        MetadataRetrival.Retry contentId ->
+            -- TODO: Retries
+            ( prevTree, Nothing )
+
+        MetadataRetrival.Inaccessable _ contentId ->
+            ( mergeInaccessable prevTree contentId, Nothing )
+
+        MetadataRetrival.IsFolder contentId ->
+            ( mergeFolderMetadata prevTree contentId, Just contentId )
+
+        MetadataRetrival.IsFile info ->
+            ( mergeFile prevTree info, Nothing )
 
 
-addFile :
+mergeFile :
     FileTree
     ->
         { contentId : ContentId
@@ -117,7 +72,7 @@ addFile :
         , size : Result HeaderError Int
         }
     -> FileTree
-addFile toMerge file =
+mergeFile toMerge file =
     let
         makeFile _ =
             File
@@ -133,17 +88,22 @@ addFile toMerge file =
                 }
     in
     withMergeParents
-        (Suspected Nothing Nothing)
+        (Suspected Nothing)
         makeFile
         toMerge
         file.contentId
 
 
-withMergeParents : (FileTree -> FileNode) -> (Maybe FileNode -> FileNode) -> FileTree -> ContentId -> FileTree
+withMergeParents :
+    (FileTree -> FileNode)
+    -> (Maybe FileNode -> FileNode)
+    -> FileTree
+    -> ContentId
+    -> FileTree
 withMergeParents parentBuilder createItem toMerge item =
     let
-        kernel prevTree toAdd =
-            case toAdd of
+        kernel prevTree partialId =
+            case partialId of
                 [] ->
                     Dict.empty
 
@@ -152,7 +112,7 @@ withMergeParents parentBuilder createItem toMerge item =
 
                 fname :: rest ->
                     case Dict.get fname prevTree of
-                        Just (Suspected _ _ children) ->
+                        Just (Suspected _ children) ->
                             Dict.insert fname
                                 (parentBuilder <|
                                     kernel children rest
@@ -166,41 +126,32 @@ withMergeParents parentBuilder createItem toMerge item =
                                 )
                                 prevTree
 
-                        Just (Folder children) ->
+                        Just (Folder mtime children) ->
                             Dict.insert fname
-                                (Folder <|
+                                (Folder mtime <|
                                     kernel children rest
                                 )
                                 prevTree
 
                         Just (File _) ->
                             Dict.insert fname
-                                (Folder <|
+                                (Folder Nothing <|
                                     kernel Dict.empty rest
                                 )
                                 prevTree
 
                         Just (Inaccessable _) ->
                             Dict.insert fname
-                                (Folder <|
+                                (Folder Nothing <|
                                     kernel Dict.empty rest
                                 )
                                 prevTree
 
                         Nothing ->
                             Dict.insert fname
-                                (Folder <|
+                                (Folder Nothing <|
                                     kernel Dict.empty rest
                                 )
                                 prevTree
     in
     kernel toMerge item
-
-
-
--- Things come in as suspected, whether they get fetched is a function of
---   how far they are from the present location, how close they are to cache
---   timeout (?), and whether they exist.
--- Cache exists on a
--- Functions:
--- Distance between current place and given item for cache updating
