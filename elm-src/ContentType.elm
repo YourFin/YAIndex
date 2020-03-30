@@ -1,6 +1,6 @@
 module ContentType exposing (ContentType(..), parse)
 
-import RegexUtil as ReU
+import Util.Regex as ReU
 
 
 type ContentType

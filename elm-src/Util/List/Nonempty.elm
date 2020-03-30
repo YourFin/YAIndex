@@ -1,4 +1,4 @@
-module ListUtils.Nonempty exposing (appendToNonEmpty, init, last)
+module Util.List.Nonempty exposing (appendToNonEmpty, init, last)
 
 import List.Nonempty as NE exposing (Nonempty(..))
 import Maybe exposing (Maybe(..))
