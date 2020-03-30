@@ -1,4 +1,4 @@
-module ListUtils exposing (last)
+module Util.List exposing (last)
 
 
 last : List a -> Maybe a
