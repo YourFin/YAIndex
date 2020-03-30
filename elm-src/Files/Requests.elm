@@ -1,4 +1,4 @@
-module Files.Requests exposing (..)
+module Files.Requests exposing (folder, metadata)
 
 import ContentId exposing (ContentId)
 import ContentType exposing (ContentType)
@@ -11,11 +11,10 @@ import Maybe exposing (Maybe(..))
 import Platform.Cmd as Cmd
 import Regex as Re
 import Result exposing (Result(..))
-import Routing exposing (Path, contentIdRawUrl)
+import Routing exposing (contentIdRawUrl)
 import String
 import Time
 import Url
-import Util exposing (flip)
 import Util.List as ListU
 import Util.Maybe as MaybeU
 import Util.Regex as ReU
@@ -27,11 +26,11 @@ import Util.Regex as ReU
 -------------------------
 
 
-requestFolder : (ContentId -> Result Http.Error InputInode -> msg) -> ContentId -> Cmd msg
-requestFolder toMsg path =
+folder : (Result Http.Error InputInode -> msg) -> ContentId -> Cmd msg
+folder toMsg path =
     Http.get
         { url = contentIdRawUrl path
-        , expect = Http.expectJson (toMsg path) folderDecoder
+        , expect = Http.expectJson toMsg folderDecoder
         }
 
 
@@ -103,8 +102,8 @@ assertField key expectedVal decoder =
 ----------------------------
 
 
-requestMetadata : (Result Http.Error InputInode -> msg) -> ContentId -> Cmd msg
-requestMetadata toMsg location =
+metadata : (Result Http.Error InputInode -> msg) -> ContentId -> Cmd msg
+metadata toMsg location =
     Http.request
         { method = "HEAD"
         , headers = []
@@ -121,8 +120,8 @@ expectMetadata toMsg =
     Http.expectBytesResponse toMsg <|
         \response ->
             case response of
-                Http.GoodStatus_ metadata _ ->
-                    parseMetadata metadata
+                Http.GoodStatus_ metadata_ _ ->
+                    parseMetadata metadata_
 
                 Http.BadUrl_ url ->
                     Err <| Http.BadUrl url
@@ -133,12 +132,12 @@ expectMetadata toMsg =
                 Http.NetworkError_ ->
                     Err <| Http.NetworkError
 
-                Http.BadStatus_ metadata _ ->
-                    Err <| Http.BadStatus metadata.statusCode
+                Http.BadStatus_ metadata_ _ ->
+                    Err <| Http.BadStatus metadata_.statusCode
 
 
 parseMetadata : Http.Metadata -> Result Http.Error InputInode
-parseMetadata metadata =
+parseMetadata metadata_ =
     let
         headers_ =
             Dict.foldr
@@ -149,13 +148,13 @@ parseMetadata metadata =
                         prevDict
                 )
                 Dict.empty
-                metadata.headers
+                metadata_.headers
     in
-    case parseUrl metadata.url of
+    case parseUrl metadata_.url of
         Fail ->
             (Err << Http.BadBody) <|
                 "Could not parse url: \""
-                    ++ metadata.url
+                    ++ metadata_.url
                     ++ "\"."
 
         Folder ->
@@ -180,7 +179,7 @@ parseMetadata metadata =
                 _ ->
                     (Err << Http.BadBody) <|
                         "Could not parse headers for file metadata on url \""
-                            ++ metadata.url
+                            ++ metadata_.url
                             ++ "\""
 
 

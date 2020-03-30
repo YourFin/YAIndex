@@ -2,8 +2,10 @@ module Main exposing (..)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav
+import ContentId exposing (ContentId)
 import Dict
-import FileTree exposing (FileNode)
+import Files exposing (Files, Inode(..), InputInode(..))
+import Files.Requests
 import Html exposing (..)
 import Html.Attributes exposing (class, style)
 import Http
@@ -11,7 +13,6 @@ import List
 import Maybe
 import MiscView
 import Pages.Content as Content exposing (contentView)
-import Pages.Login exposing (loginView)
 import Platform.Cmd as Cmd
 import Result exposing (Result(..))
 import Routing exposing (Route(..))
@@ -26,9 +27,8 @@ import Url
 
 type alias Model =
     { key : Nav.Key
-    , route : Routing.Route
-    , loggedIn : Bool
-    , filesState : Content.FilesState
+    , route : Route
+    , files : Files
     , zone : Time.Zone
     }
 
@@ -39,17 +39,25 @@ type alias Model =
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Message )
 init flags url key =
+    let
+        route =
+            Routing.parseUrl url
+
+        fetchCmd =
+            case route of
+                ContentRoute contentId _ ->
+                    Files.Requests.metadata (GotInputInode contentId) contentId
+
+                PageNotFoundRoute ->
+                    Cmd.none
+    in
     ( { key = key
-      , route = Routing.parseUrl url
-      , loggedIn = True
-      , filesState = Content.Loading
+      , route = route
+      , files = Files.none
       , zone = Time.utc
       }
     , Cmd.batch
-        [ Http.get
-            { url = "/files/list"
-            , expect = Http.expectJson GotFiles FileTree.filesDecoder
-            }
+        [ fetchCmd
         , Task.perform GotZone Time.here
         ]
     )
@@ -73,11 +81,8 @@ view model =
         [ header [] [ MiscView.navbar ] ]
             ++ mainWrapper
                 (case route of
-                    LoginRoute redirect ->
-                        loginView redirect
-
                     ContentRoute path query ->
-                        contentView model.zone model.filesState path query
+                        contentView model.zone model.files path query
 
                     _ ->
                         MiscView.notFoundView
@@ -88,8 +93,8 @@ view model =
 type Message
     = LinkClicked Browser.UrlRequest
     | GotZone Time.Zone
-    | UrlChanged Url.Url
-    | GotFiles (Result Http.Error FileNode)
+    | RouteChanged Route
+    | GotInputInode ContentId (Result Http.Error InputInode)
 
 
 
@@ -111,16 +116,35 @@ update message model =
                 Browser.External href ->
                     ( model, Nav.load href )
 
-        UrlChanged url ->
-            ( { model | route = Routing.parseUrl url }, Cmd.none )
+        RouteChanged route ->
+            ( { model | route = route }
+            , case route of
+                ContentRoute contentId _ ->
+                    Files.Requests.metadata (GotInputInode contentId) contentId
 
-        GotFiles res ->
-            case res of
-                Ok files ->
-                    ( { model | filesState = Content.Success files }, Cmd.none )
+                _ ->
+                    Cmd.none
+            )
 
-                Err _ ->
-                    ( { model | filesState = Content.FilesError }, Cmd.none )
+        GotInputInode contentId result ->
+            case result of
+                Ok (UnexploredFolder x) ->
+                    ( { model | files = Files.insertAt (UnexploredFolder x) contentId model.files }
+                    , Files.Requests.folder (GotInputInode contentId) contentId
+                    )
+
+                Ok inode ->
+                    ( { model | files = Files.insertAt inode contentId model.files }
+                    , Cmd.none
+                    )
+
+                Err (Http.BadStatus _) ->
+                    ( { model | files = Files.markInaccessable contentId model.files }
+                    , Cmd.none
+                    )
+
+                Err error ->
+                    Debug.log "Unhandled http error" ( model, Cmd.none )
 
         GotZone zone ->
             ( { model | zone = zone }, Cmd.none )
@@ -146,6 +170,6 @@ main =
         , view = view
         , update = update
         , subscriptions = subscriptions
-        , onUrlChange = UrlChanged
+        , onUrlChange = RouteChanged << Routing.parseUrl
         , onUrlRequest = LinkClicked
         }

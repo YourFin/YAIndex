@@ -1,27 +1,22 @@
 module Pages.Content exposing (..)
 
+import ContentId exposing (ContentId)
 import DateFormat
 import Dict
-import FileTree exposing (FileNode(..))
+import Files exposing (Files, Inode(..), RetrivalError(..))
 import Filesize
 import Html exposing (..)
 import Html.Attributes as Attr exposing (class, href, id, style)
 import List
 import List.Nonempty as NE exposing (Nonempty(..))
-import ListUtils as LU
-import ListUtils.Nonempty as NEU
 import Maybe exposing (Maybe(..))
 import MiscView exposing (ariaHidden, ariaLabel)
 import Regex as Re
 import Routing exposing (Route(..))
 import Time
 import Url
-
-
-type FilesState
-    = Loading
-    | FilesError
-    | Success FileTree.FileNode
+import Util.List as LU
+import Util.List.Nonempty as NEU
 
 
 loading : Html msg
@@ -30,45 +25,20 @@ loading =
         [ text "Loading..." ]
 
 
-contentFileNode : FileNode -> Routing.ContentId -> Maybe FileNode
-contentFileNode node path =
-    -- Should probably switch Maybe with error, but meh
-    case ( node, path ) of
-        ( _, [] ) ->
-            Maybe.Just node
-
-        ( File file, _ ) ->
-            Maybe.Nothing
-
-        ( Folder folder, key :: rest ) ->
-            case Dict.get key folder.children of
-                Maybe.Just child ->
-                    contentFileNode child rest
-
-                Maybe.Nothing ->
-                    Maybe.Nothing
-
-
-contentView : Time.Zone -> FilesState -> Routing.ContentId -> Maybe String -> List (Html msg)
-contentView zone filesState contentId query =
+contentView : Time.Zone -> Files -> ContentId -> Maybe String -> List (Html msg)
+contentView zone files contentId query =
     let
         body =
-            case filesState of
-                Loading ->
+            case Files.at contentId files of
+                Err Unknown ->
                     loading
 
-                FilesError ->
+                Err Inaccessable ->
                     div [ class "content" ]
-                        [ text "Error loading files" ]
+                        [ text "Could not find file" ]
 
-                Success files ->
-                    case contentFileNode files contentId of
-                        Maybe.Just fNode ->
-                            renderFiles zone fNode contentId query
-
-                        Maybe.Nothing ->
-                            div [ class "content" ]
-                                [ text "File not found" ]
+                Ok inode ->
+                    renderFiles zone inode contentId query
 
         fullBreadcrumb =
             NEU.appendToNonEmpty (NE.fromElement "Home") contentId
@@ -118,7 +88,7 @@ contentView zone filesState contentId query =
     ]
 
 
-renderFiles : Time.Zone -> FileNode -> Routing.ContentId -> Maybe String -> Html msg
+renderFiles : Time.Zone -> Inode -> ContentId -> Maybe String -> Html msg
 renderFiles zone files contentId query =
     let
         makeHref : String -> Html.Attribute msg
@@ -136,14 +106,14 @@ renderFiles zone files contentId query =
                 |> List.foldl (||) False
     in
     case files of
-        Folder folder ->
+        Folder _ children ->
             table [ class "table", ariaLabel "List of files" ]
                 [ thead []
                     [ th [] [ text "File" ]
                     , th [] [ text "Size" ]
                     , th [] [ text "Modified" ]
                     ]
-                , Dict.toList folder.children
+                , Dict.toList children
                     |> List.map
                         (\( name, node ) ->
                             let
@@ -152,7 +122,7 @@ renderFiles zone files contentId query =
                                         File file ->
                                             Filesize.format file.size
 
-                                        Folder _ ->
+                                        Folder _ _ ->
                                             "N/A"
 
                                 modified =
@@ -160,15 +130,15 @@ renderFiles zone files contentId query =
                                         File file ->
                                             file.modified
 
-                                        Folder fol ->
-                                            fol.modified
+                                        Folder mtime _ ->
+                                            Maybe.withDefault "Unknown" mtime
 
                                 icon =
                                     case node of
                                         File _ ->
                                             i [ class "fa fa-file", ariaLabel "File" ] []
 
-                                        Folder _ ->
+                                        Folder _ _ ->
                                             i [ class "fa fa-folder", ariaLabel "Folder" ] []
                             in
                             tr []
@@ -180,21 +150,22 @@ renderFiles zone files contentId query =
                                     ]
                                 , td [] [ text sizeText ]
                                 , td []
-                                    [ text
-                                        (DateFormat.format
-                                            [ DateFormat.yearNumber
-                                            , DateFormat.text "-"
-                                            , DateFormat.monthFixed
-                                            , DateFormat.text "-"
-                                            , DateFormat.dayOfMonthFixed
-                                            , DateFormat.text " "
-                                            , DateFormat.hourMilitaryNumber
-                                            , DateFormat.text ":"
-                                            , DateFormat.minuteFixed
-                                            ]
-                                            zone
-                                            modified
-                                        )
+                                    [ text modified
+
+                                    --     (DateFormat.format
+                                    --         [ DateFormat.yearNumber
+                                    --         , DateFormat.text "-"
+                                    --         , DateFormat.monthFixed
+                                    --         , DateFormat.text "-"
+                                    --         , DateFormat.dayOfMonthFixed
+                                    --         , DateFormat.text " "
+                                    --         , DateFormat.hourMilitaryNumber
+                                    --         , DateFormat.text ":"
+                                    --         , DateFormat.minuteFixed
+                                    --         ]
+                                    --         zone
+                                    --         modified
+                                    --     )
                                     ]
                                 ]
                         )
@@ -207,21 +178,21 @@ renderFiles zone files contentId query =
                     [ text thisItemName ]
                 , text
                     ("Last modified: "
-                        ++ DateFormat.format
-                            [ DateFormat.monthNameAbbreviated
-                            , DateFormat.text " "
-                            , DateFormat.dayOfMonthSuffix
-                            , DateFormat.text ", "
-                            , DateFormat.yearNumber
-                            , DateFormat.text " "
-                            , DateFormat.hourFixed
-                            , DateFormat.text ":"
-                            , DateFormat.minuteFixed
-                            , DateFormat.text " "
-                            , DateFormat.amPmLowercase
-                            ]
-                            zone
-                            file.modified
+                        -- ++ DateFormat.format
+                        --     [ DateFormat.monthNameAbbreviated
+                        --     , DateFormat.text " "
+                        --     , DateFormat.dayOfMonthSuffix
+                        --     , DateFormat.text ", "
+                        --     , DateFormat.yearNumber
+                        --     , DateFormat.text " "
+                        --     , DateFormat.hourFixed
+                        --     , DateFormat.text ":"
+                        --     , DateFormat.minuteFixed
+                        --     , DateFormat.text " "
+                        --     , DateFormat.amPmLowercase
+                        --     ]
+                        --     zone
+                        ++ file.modified
                     )
                 , br [] []
                 , text ("Size: " ++ Filesize.format file.size)

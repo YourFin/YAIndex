@@ -1,5 +1,6 @@
-module Routing exposing (Path, Route(..), contentIdRawHref, contentIdRawUrl, isElmUrl, parseUrl, rootRoute, show, toHref, toLink, toUrlString)
+module Routing exposing (Route(..), contentIdRawHref, contentIdRawUrl, isElmUrl, parseUrl, rootRoute, show, toHref, toLink, toUrlString)
 
+import ContentId exposing (ContentId)
 import Html exposing (Html)
 import Html.Attributes
 import List
@@ -12,14 +13,9 @@ import Url.Parser exposing ((</>), (<?>), Parser, map, oneOf, s, string, top)
 import Url.Parser.Query as Query
 
 
-type alias Path =
-    List String
-
-
 type Route
-    = ContentRoute Path (Maybe String)
+    = ContentRoute ContentId (Maybe String)
     | PageNotFoundRoute
-    | LoginRoute Route
 
 
 rootRoute : Route
@@ -56,7 +52,7 @@ rootRoute =
 -}
 
 
-encodeContentId : Path -> String
+encodeContentId : ContentId -> String
 encodeContentId id =
     let
         reFromStr str =
@@ -115,7 +111,7 @@ splitOnUnescapedPathSep str =
         |> List.map String.reverse
 
 
-decodeContentId : String -> Path
+decodeContentId : String -> ContentId
 decodeContentId input =
     let
         reFromStr string =
@@ -141,9 +137,6 @@ show route =
         PageNotFoundRoute ->
             "PageNotFoundRoute"
 
-        LoginRoute redirRoute ->
-            "LoginRoute redirecting to: " ++ show redirRoute
-
 
 toUrlString : Route -> String
 toUrlString route =
@@ -161,16 +154,6 @@ toUrlString route =
         PageNotFoundRoute ->
             Url.Builder.absolute [ "404" ] []
 
-        LoginRoute redirRoute ->
-            case redirRoute of
-                LoginRoute _ ->
-                    toUrlString redirRoute
-
-                _ ->
-                    Url.Builder.absolute
-                        [ "login" ]
-                        [ Url.Builder.string "redir" (toUrlString redirRoute) ]
-
 
 toHref : Route -> Html.Attribute msg
 toHref route =
@@ -184,14 +167,18 @@ toLink route text =
         [ Html.text text ]
 
 
-contentIdRawUrl : Path -> String
+contentIdRawUrl : ContentId -> String
 contentIdRawUrl path =
-    Url.Builder.absolute
-        ([ "raw" ] ++ List.map Url.percentEncode path)
-        []
+    "/raw/" ++ String.join "/" path
 
 
-contentIdRawHref : Path -> Html.Attribute msg
+
+-- Url.Builder.absolute
+--     ([ "raw" ] ++ List.map Url.percentEncode path)
+--     []
+
+
+contentIdRawHref : ContentId -> Html.Attribute msg
 contentIdRawHref path =
     let
         link =
@@ -224,7 +211,7 @@ isElmUrl url =
             [ rawPat, requestsPat ]
 
 
-contentIdParser : Parser (Path -> a) a
+contentIdParser : Parser (ContentId -> a) a
 contentIdParser =
     Url.Parser.custom "URLsplit" <|
         \segment ->
@@ -258,7 +245,6 @@ matchers =
         , map (ContentRoute []) (s "c" <?> Query.string "q")
         , map ContentRoute (s "c" </> contentIdParser <?> Query.string "q")
         , map PageNotFoundRoute (s "404.html")
-        , map LoginRoute (s "login" <?> redirQuery)
         ]
 
 
