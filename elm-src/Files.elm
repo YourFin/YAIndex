@@ -1,8 +1,10 @@
 module Files exposing
     ( Files
     , Inode(..)
+    , InputInode(..)
     , RetrivalError(..)
     , at
+    , childrenOf
     , insertAt
     , markInaccessable
     , none
@@ -13,6 +15,7 @@ import ContentType exposing (ContentType)
 import Dict exposing (Dict)
 import List.Nonempty exposing (Nonempty(..))
 import Result exposing (Result(..))
+import Routing exposing (Path)
 
 
 
@@ -36,6 +39,16 @@ be accessed through the various functions exposed in this module.
 -}
 type Files
     = Files FileTree_
+
+
+type InputInode
+    = InputFile
+        { contentType : ContentType
+        , size : Int
+        , modified : String
+        }
+    | UnexploredFolder String
+    | ExploredFolder (Maybe String) (Dict String InputInode)
 
 
 type Inode
@@ -82,13 +95,34 @@ at contentId files =
     kernel contentId (filesToTree files)
 
 
+childrenOf : Path -> Files -> Result RetrivalError (Dict String Inode)
+childrenOf path files =
+    let
+        fileTree =
+            filesToTree files
+
+        kernel : Path -> Maybe FileTree_ -> Result RetrivalError (Dict String Inode)
+        kernel path_ tree =
+            case ( path_, tree ) of
+                ( _, Nothing ) ->
+                    Err Unknown
+
+                ( [], Just tree_ ) ->
+                    Ok <| fileTreeToInodes tree_
+
+                ( fname :: rest, Just tree_ ) ->
+                    kernel rest (Maybe.map fNodeChildren (Dict.get fname tree_))
+    in
+    kernel path (Just fileTree)
+
+
 {-| Insert an Inode at a given ContentId.
 -}
-insertAt : Inode -> ContentId -> Files -> Files
-insertAt inode contentId =
+insertAt : InputInode -> ContentId -> Files -> Files
+insertAt iinode contentId =
     let
         fileNode =
-            inodeToFileNode inode
+            iinodeToFileNode iinode
     in
     mapTree (insertNode contentId fileNode)
 
@@ -160,6 +194,19 @@ inodeToFileNode inode =
 
         Folder mtime children ->
             Folder_ mtime <| Dict.map (always inodeToFileNode) children
+
+
+iinodeToFileNode : InputInode -> FileNode_
+iinodeToFileNode inode =
+    case inode of
+        InputFile info ->
+            File_ info Dict.empty
+
+        ExploredFolder mtime children ->
+            Folder_ mtime <| Dict.map (always iinodeToFileNode) children
+
+        UnexploredFolder mtime ->
+            Folder_ (Just mtime) Dict.empty
 
 
 filesToTree : Files -> FileTree_
@@ -259,12 +306,55 @@ withParents contentId child =
                     Dict.singleton fname child
 
                 Nonempty fname (first :: rest) ->
-                    Dict.singleton fname <|
-                        parentBuilder <|
-                            kernel <|
-                                Nonempty first rest
+                    Nonempty first rest
+                        |> kernel
+                        |> parentBuilder
+                        |> Dict.singleton fname
     in
     kernel contentId
+
+
+{-| Changes any leaves that are Folder\_'s into Suspected\_
+
+Applied to all trees that are passed in. Since callers don't have any way to
+insert Suspected\_ items, the idea is that dangling folders are going to be
+actually just unfetched 90% of the time.
+
+The main "downside" of this behaviour is that empty folders essentially aren't
+cached by FileTrees, but that isn't always bad behaviour.
+
+-}
+suspectDanglingFolders : FileNode_ -> FileNode_
+suspectDanglingFolders node =
+    let
+        recurse =
+            Dict.map <| always suspectDanglingFolders
+    in
+    case node of
+        Folder_ mtime children ->
+            if Dict.isEmpty children then
+                Suspected_ mtime Dict.empty
+
+            else
+                Folder_ mtime <| recurse children
+
+        File_ info children ->
+            File_ info <| recurse children
+
+        Inaccessable_ children ->
+            Inaccessable_ <| recurse children
+
+        Placeholder_ children ->
+            Placeholder_ <| recurse children
+
+        Suspected_ mtime children ->
+            Suspected_ mtime <| recurse children
+
+
+
+----
+---- FileTree merging
+----
 
 
 {-| Merge two FileTrees, with precidence given to the SECOND one.

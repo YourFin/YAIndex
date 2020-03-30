@@ -1,6 +1,5 @@
-module Routing exposing (Route(..), contentIdRawHref, contentIdRawUrl, isElmUrl, parseUrl, rootRoute, show, toHref, toLink, toUrlString)
+module Routing exposing (Path, Route(..), contentIdRawHref, contentIdRawUrl, isElmUrl, parseUrl, rootRoute, show, toHref, toLink, toUrlString)
 
-import FileTree exposing (ContentId)
 import Html exposing (Html)
 import Html.Attributes
 import List
@@ -13,11 +12,19 @@ import Url.Parser exposing ((</>), (<?>), Parser, map, oneOf, s, string, top)
 import Url.Parser.Query as Query
 
 
+type alias Path =
+    List String
+
+
 type Route
-    = ContentRoute ContentId (Maybe String)
-    | RootRoute (Maybe String)
+    = ContentRoute Path (Maybe String)
     | PageNotFoundRoute
     | LoginRoute Route
+
+
+rootRoute : Route
+rootRoute =
+    ContentRoute [] Nothing
 
 
 
@@ -49,7 +56,7 @@ type Route
 -}
 
 
-encodeContentId : ContentId -> String
+encodeContentId : Path -> String
 encodeContentId id =
     let
         reFromStr str =
@@ -108,7 +115,7 @@ splitOnUnescapedPathSep str =
         |> List.map String.reverse
 
 
-decodeContentId : String -> ContentId
+decodeContentId : String -> Path
 decodeContentId input =
     let
         reFromStr string =
@@ -177,14 +184,14 @@ toLink route text =
         [ Html.text text ]
 
 
-contentIdRawUrl : ContentId -> String
+contentIdRawUrl : Path -> String
 contentIdRawUrl path =
     Url.Builder.absolute
         ([ "raw" ] ++ List.map Url.percentEncode path)
         []
 
 
-contentIdRawHref : ContentId -> Html.Attribute msg
+contentIdRawHref : Path -> Html.Attribute msg
 contentIdRawHref path =
     let
         link =
@@ -217,7 +224,7 @@ isElmUrl url =
             [ rawPat, requestsPat ]
 
 
-contentIdParser : Parser (ContentId -> a) a
+contentIdParser : Parser (Path -> a) a
 contentIdParser =
     Url.Parser.custom "URLsplit" <|
         \segment ->

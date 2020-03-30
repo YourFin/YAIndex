@@ -2,7 +2,7 @@ module RequestTree exposing (mergeMetadata)
 
 import ContentType exposing (ContentType)
 import Dict exposing (Dict)
-import FileTree exposing (FileNode(..), FileTree)
+import Files exposing (Files, InputInode(..))
 import Http exposing (Expect)
 import List
 import ListUtils as ListU
@@ -12,13 +12,13 @@ import Platform.Cmd as Cmd
 import Regex as Re
 import RegexUtil as ReU
 import Result exposing (Result(..))
-import Routing exposing (ContentId)
+import Routing exposing (Path)
 import String
 import Time
 
 
-mergeFolder : FileTree -> ContentId -> FileTree -> FileTree
-mergeFolder prevTree location newFolderChildren =
+addFolder : Files -> Path -> Files -> Files
+addFolder prevTree location newFolderChildren =
     let
         makeFolder prevNode =
             case prevNode of
@@ -39,10 +39,10 @@ mergeFolder prevTree location newFolderChildren =
 
 
 {-| Takes in previous tree and a metadata result, and returns a new tree with
-the metadata results merged in and possibly a ContentId that should have folder
+the metadata results merged in and possibly a Path that should have folder
 data fetched.
 -}
-mergeMetadata : FileTree -> MetadataResult -> ( FileTree, Maybe ContentId )
+mergeMetadata : Files -> MetadataResult -> ( Files, Maybe Path )
 mergeMetadata prevTree metadata =
     case metadata of
         MetadataRetrival.ApplicationException msg ->
@@ -64,14 +64,14 @@ mergeMetadata prevTree metadata =
 
 
 mergeFile :
-    FileTree
+    Files
     ->
-        { contentId : ContentId
+        { contentId : Path
         , modified : Result HeaderError String
         , contentType : Result HeaderError String
         , size : Result HeaderError Int
         }
-    -> FileTree
+    -> Files
 mergeFile toMerge file =
     let
         makeFile _ =
@@ -95,11 +95,11 @@ mergeFile toMerge file =
 
 
 withMergeParents :
-    (FileTree -> FileNode)
-    -> (Maybe FileNode -> FileNode)
-    -> FileTree
-    -> ContentId
-    -> FileTree
+    (Files -> InputInode)
+    -> (Maybe InputInode -> InputInode)
+    -> Files
+    -> Path
+    -> Files
 withMergeParents parentBuilder createItem toMerge item =
     let
         kernel prevTree partialId =

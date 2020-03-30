@@ -8,13 +8,13 @@ import Platform.Cmd as Cmd
 import Regex as Re
 import RegexUtil as ReU
 import Result exposing (Result(..))
-import Routing exposing (ContentId)
+import Routing exposing (Path)
 import String
 import Time
 import Url
 
 
-getMetadata : (Result () MetadataResult -> msg) -> ContentId -> Cmd msg
+getMetadata : (Result () MetadataResult -> msg) -> Path -> Cmd msg
 getMetadata toMsg location =
     Http.request
         { method = "HEAD"
@@ -33,20 +33,20 @@ type HeaderError
 
 
 type MetadataResult
-    = ApplicationException String -- Message as to what the fuck happened
-    | Retry ContentId -- Message as to what happened
-    | Inaccessable String ContentId -- Returns statusText, url
-    | IsFolder ContentId
+    = ApplicationException String -- Message as to what happened
+    | Retry Path -- Message as to what happened
+    | Inaccessable String Path -- Returns statusText, url
+    | IsFolder Path
     | IsFile
-        { contentId : ContentId
+        { path : Path
         , modified : Result HeaderError String
         , contentType : Result HeaderError String
         , size : Result HeaderError Int
         }
 
 
-expectMetadata : ContentId -> (Result () MetadataResult -> msg) -> Expect msg
-expectMetadata contentId toMsg =
+expectMetadata : Path -> (Result () MetadataResult -> msg) -> Expect msg
+expectMetadata path toMsg =
     Http.expectBytesResponse toMsg <|
         \response ->
             Ok
@@ -55,17 +55,17 @@ expectMetadata contentId toMsg =
                         ApplicationException ("Url: \"" ++ url ++ "\" was bad when trying to send head request.")
 
                     Http.Timeout_ ->
-                        Retry contentId
+                        Retry path
 
                     Http.NetworkError_ ->
-                        Retry contentId
+                        Retry path
 
                     Http.BadStatus_ metadata _ ->
-                        Inaccessable metadata.statusText contentId
+                        Inaccessable metadata.statusText path
 
                     Http.GoodStatus_ metadata _ ->
                         if isFolder metadata.url then
-                            IsFolder contentId
+                            IsFolder path
 
                         else
                             let
@@ -76,7 +76,7 @@ expectMetadata contentId toMsg =
                                 { modified = parsed.modified
                                 , contentType = parsed.contentType
                                 , size = parsed.contentLength
-                                , contentId = contentId
+                                , path = path
                                 }
                 )
 
