@@ -1,7 +1,7 @@
 module Files exposing
     ( Files
     , Inode(..)
-    , RetrivalError
+    , RetrivalError(..)
     , at
     , insertAt
     , markInaccessable
@@ -28,15 +28,37 @@ import Result exposing (Result(..))
 ----------------
 
 
+{-| Known information about file system server-side
+
+The "model" of this module, if you will. Files is deliberatly opaque, and should
+be accessed through the various functions exposed in this module.
+
+-}
 type Files
     = Files FileTree_
 
 
+type Inode
+    = File
+        { contentType : ContentType
+        , size : Int
+        , modified : String
+        }
+    | Folder (Maybe String) (Dict String Inode)
+
+
+{-| The empty Files object.
+
+Primarily use is in "init" in main
+
+-}
 none : Files
 none =
     Files Dict.empty
 
 
+{-| Get the Inode at a given content id, if it's there.
+-}
 at : ContentId -> Files -> Result RetrivalError Inode
 at contentId files =
     let
@@ -60,6 +82,8 @@ at contentId files =
     kernel contentId (filesToTree files)
 
 
+{-| Insert an Inode at a given ContentId.
+-}
 insertAt : Inode -> ContentId -> Files -> Files
 insertAt inode contentId =
     let
@@ -69,23 +93,18 @@ insertAt inode contentId =
     mapTree (insertNode contentId fileNode)
 
 
+{-| Mark a given ContentId as inaccessable (i.e. returned a 40x).
+-}
 markInaccessable : ContentId -> Files -> Files
 markInaccessable contentId =
     mapTree (insertNode contentId <| Inaccessable_ Dict.empty)
 
 
-type Inode
-    = File
-        { contentType : ContentType
-        , size : Int
-        , modified : String
-        }
-    | Folder (Maybe String) (Dict String Inode)
-
-
+{-| Error type returned by at.
+-}
 type RetrivalError
-    = Unknown
-    | Inaccessable
+    = Unknown --| The given ContentId has not been fetched before
+    | Inaccessable --| The given ContentId is not accessable
 
 
 
@@ -128,8 +147,9 @@ fileNodeToInode node =
         Placeholder_ _ ->
             Err Unknown
 
-        Suspected_ mtime children ->
-            Ok <| Folder mtime <| fileTreeToInodes children
+        Suspected_ _ _ ->
+            -- This right here is /why/ we have the suspected type
+            Err Unknown
 
 
 inodeToFileNode : Inode -> FileNode_
