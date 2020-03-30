@@ -314,43 +314,6 @@ withParents contentId child =
     kernel contentId
 
 
-{-| Changes any leaves that are Folder\_'s into Suspected\_
-
-Applied to all trees that are passed in. Since callers don't have any way to
-insert Suspected\_ items, the idea is that dangling folders are going to be
-actually just unfetched 90% of the time.
-
-The main "downside" of this behaviour is that empty folders essentially aren't
-cached by FileTrees, but that isn't always bad behaviour.
-
--}
-suspectDanglingFolders : FileNode_ -> FileNode_
-suspectDanglingFolders node =
-    let
-        recurse =
-            Dict.map <| always suspectDanglingFolders
-    in
-    case node of
-        Folder_ mtime children ->
-            if Dict.isEmpty children then
-                Suspected_ mtime Dict.empty
-
-            else
-                Folder_ mtime <| recurse children
-
-        File_ info children ->
-            File_ info <| recurse children
-
-        Inaccessable_ children ->
-            Inaccessable_ <| recurse children
-
-        Placeholder_ children ->
-            Placeholder_ <| recurse children
-
-        Suspected_ mtime children ->
-            Suspected_ mtime <| recurse children
-
-
 
 ----
 ---- FileTree merging
