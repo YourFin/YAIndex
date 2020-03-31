@@ -23,3 +23,8 @@ matches pattern toMatch =
 matchesNoCase : String -> String -> Bool
 matchesNoCase pattern toMatch =
     Re.contains (fromPatNoCase pattern) toMatch
+
+
+escape : String -> String
+escape =
+    Re.replace (fromPat "[.*+\\-?^${}()|[\\]\\\\]") (.match >> (++) "\\")

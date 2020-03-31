@@ -1,9 +1,13 @@
-module Routing.Roots exposing (Roots, create)
+module Routing.Roots exposing (Roots, contentUrl, create, parseUrl, rawUrl)
 
+import ContentId exposing (ContentId)
 import Maybe exposing (Maybe(..))
 import Regex as Re
 import Result exposing (Result(..))
 import Url exposing (Url)
+import Url.Builder
+import Url.Parser exposing ((<?>))
+import Url.Parser.Query
 import Util.Maybe as MaybeU
 import Util.Regex as ReU
 import Util.Result as ResultU
@@ -61,7 +65,38 @@ create serverIndexRoot webappRoot visitedUrl =
         parsedWebapp =
             parseRoot webappRoot
     in
-    ResultU.andThen2 (createHelper serverIndexRoot webappRoot visitedUrl) parsedServerIndex parsedWebapp
+    ResultU.andThen2
+        (createHelper serverIndexRoot webappRoot visitedUrl)
+        parsedServerIndex
+        parsedWebapp
+
+
+rawUrl : Roots -> ContentId -> String
+rawUrl roots contentId =
+    let
+        serverIndex =
+            unwrap roots |> .serverIndex
+    in
+    Url.toString serverIndex
+        ++ Url.Builder.relative contentId []
+
+
+contentUrl : Roots -> ContentId -> Maybe String -> String
+contentUrl roots contentId query =
+    let
+        webappBase =
+            unwrap roots |> .webapp
+
+        queryParams =
+            case query of
+                Just query_ ->
+                    [ Url.Builder.string "q" query_ ]
+
+                Nothing ->
+                    []
+    in
+    Url.toString webappBase
+        ++ Url.Builder.relative contentId queryParams
 
 
 type alias Roots_ =
@@ -237,11 +272,11 @@ createHelper serverIndexRoot webappRoot visitedUrl parsedServerIndex parsedWebap
 collides : ParsedRoot_ -> ParsedRoot_ -> Bool
 collides rawRoute clientRoute =
     case ( rawRoute, clientRoute ) of
-        ( Full rawUrl, Full clientUrl ) ->
-            (rawUrl.host == clientUrl.host)
-                && (rawUrl.port_ == clientUrl.port_)
+        ( Full rawUrl_, Full clientUrl ) ->
+            (rawUrl_.host == clientUrl.host)
+                && (rawUrl_.port_ == clientUrl.port_)
                 && collidesHelper
-                    ((List.filter ((/=) "") << String.split "/") rawUrl.path)
+                    ((List.filter ((/=) "") << String.split "/") rawUrl_.path)
                     ((List.filter ((/=) "") << String.split "/") clientUrl.path)
 
         ( Full url, Absolute str ) ->
@@ -262,7 +297,7 @@ collides rawRoute clientRoute =
 
 collidesHelper : List String -> List String -> Bool
 collidesHelper raw client =
-    case ( Debug.log "Raw" raw, Debug.log "Client" client ) of
+    case ( raw, client ) of
         ( _, [] ) ->
             True
 
@@ -292,3 +327,63 @@ unwrap root =
 map : (Roots_ -> Roots_) -> Roots -> Roots
 map f =
     unwrap >> f >> Roots
+
+
+
+-----------------
+-- Url Parsing --
+-----------------
+
+
+{-| Returns Nothing if the url isn't part of the webapp
+-}
+parseUrl : Roots -> Url -> Maybe ( ContentId, Maybe String )
+parseUrl roots toParse =
+    let
+        webappUrl =
+            unwrap roots |> .webapp
+
+        choppedUrl =
+            withoutBase webappUrl.path toParse.path
+                |> Maybe.map (\pa -> { toParse | path = pa })
+    in
+    case choppedUrl of
+        Nothing ->
+            Nothing
+
+        Just url ->
+            ( String.split "/" url.path
+                |> List.filter ((/=) "")
+                |> List.map Url.percentDecode
+                |> MaybeU.liftList
+            , MaybeU.flatMap <| Url.Parser.parse qParamsParser url
+            )
+                |> (\( a, b ) ->
+                        case a of
+                            Just val ->
+                                Just ( val, b )
+
+                            Nothing ->
+                                Nothing
+                   )
+
+
+qParamsParser : Url.Parser.Parser (Maybe String -> a) a
+qParamsParser =
+    Url.Parser.top <?> Url.Parser.Query.string "q"
+
+
+withoutBase : String -> String -> Maybe String
+withoutBase base toChop =
+    let
+        escaped =
+            ReU.escape base
+
+        pat =
+            ReU.fromPat <| "^" ++ escaped
+    in
+    if Re.contains pat toChop then
+        Just <| Re.replace pat (always "/") toChop
+
+    else
+        Nothing

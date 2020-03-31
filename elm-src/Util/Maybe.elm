@@ -22,3 +22,13 @@ hasValue input =
 
         Nothing ->
             False
+
+
+flatMap : Maybe (Maybe a) -> Maybe a
+flatMap a =
+    case a of
+        Just (Just val) ->
+            Just val
+
+        _ ->
+            Nothing
