@@ -9,11 +9,11 @@ module Files exposing
     , none
     )
 
-import ContentId exposing (ContentId)
 import ContentType exposing (ContentType)
 import Dict exposing (Dict)
 import List.Nonempty exposing (Nonempty(..))
 import Result exposing (Result(..))
+import Routing exposing (ContentId)
 
 
 

@@ -1,6 +1,5 @@
 module Routing exposing (Roots, Route(..), contentUrl, create, parseUrl, rawUrl, show)
 
-import ContentId exposing (ContentId)
 import Maybe exposing (Maybe(..))
 import Regex as Re
 import Result exposing (Result(..))
@@ -12,6 +11,8 @@ import Util.Maybe as MaybeU
 import Util.Regex as ReU
 import Util.Result as ResultU
 
+type alias ContentId =
+    List String
 
 type Route
     = ContentRoute Roots ContentId (Maybe String)

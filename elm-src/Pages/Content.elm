@@ -1,6 +1,5 @@
 module Pages.Content exposing (..)
 
-import ContentId exposing (ContentId)
 import DateFormat
 import Dict
 import Files exposing (Files, Inode(..), RetrivalError(..))
@@ -12,7 +11,7 @@ import List.Nonempty as NE exposing (Nonempty(..))
 import Maybe exposing (Maybe(..))
 import MiscView exposing (ariaHidden, ariaLabel)
 import Regex as Re
-import Routing exposing (Route(..))
+import Routing exposing (ContentId, Route(..))
 import Time
 import Url
 import Util.List as LU

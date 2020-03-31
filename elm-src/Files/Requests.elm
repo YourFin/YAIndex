@@ -1,6 +1,5 @@
 module Files.Requests exposing (folder, metadata)
 
-import ContentId exposing (ContentId)
 import ContentType exposing (ContentType)
 import Dict exposing (Dict)
 import Files exposing (InputInode(..))
@@ -11,7 +10,7 @@ import Maybe exposing (Maybe(..))
 import Platform.Cmd as Cmd
 import Regex as Re
 import Result exposing (Result(..))
-import Routing exposing (contentIdRawUrl)
+import Routing exposing (ContentId, rawUrl)
 import String
 import Time
 import Url
