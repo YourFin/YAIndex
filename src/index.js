@@ -16,5 +16,7 @@ import {
 import style from './packs/global-styles';
 
 document.addEventListener('DOMContentLoaded', () => {
-  Elm.Main.init();
+  Elm.Main.init({flags:
+                 { "server-index": "/raw/"
+                   , "webapp-root": "/c/"}});
 });

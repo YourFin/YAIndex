@@ -25,10 +25,14 @@ import Util.Regex as ReU
 -------------------------
 
 
-folder : (Result Http.Error InputInode -> msg) -> ContentId -> Cmd msg
-folder toMsg path =
+folder :
+    Routing.Roots
+    -> (Result Http.Error InputInode -> msg)
+    -> ContentId
+    -> Cmd msg
+folder roots toMsg path =
     Http.get
-        { url = contentIdRawUrl path
+        { url = Routing.rawUrl roots path
         , expect = Http.expectJson toMsg folderDecoder
         }
 
@@ -101,12 +105,16 @@ assertField key expectedVal decoder =
 ----------------------------
 
 
-metadata : (Result Http.Error InputInode -> msg) -> ContentId -> Cmd msg
-metadata toMsg location =
+metadata :
+    Routing.Roots
+    -> (Result Http.Error InputInode -> msg)
+    -> ContentId
+    -> Cmd msg
+metadata roots toMsg location =
     Http.request
         { method = "HEAD"
         , headers = []
-        , url = Routing.contentIdRawUrl location
+        , url = Routing.rawUrl roots location
         , body = Http.emptyBody
         , expect = expectMetadata toMsg
         , timeout = Nothing

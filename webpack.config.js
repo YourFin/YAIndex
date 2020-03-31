@@ -19,8 +19,9 @@ Running in ${prod ? "production" : "development"} mode.
     mode: prod ? 'production' : 'development',
     devtool: prod ? /* none */ '' : 'cheap-module-eval-source-map',
     devServer: prod ? {} : {
-      contentBase: './dist',
+      contentBase: path.join(__dirname, 'dist'),
       hot: true,
+      overlay: true,
       historyApiFallback: true, // Allows serving webapp at all paths
       //disableHostCheck: true,
     },
@@ -89,6 +90,7 @@ Running in ${prod ? "production" : "development"} mode.
     output: {
       filename: prod ? '[name].[hash].js' : '[name].js',
       path: path.resolve(__dirname, 'dist'),
+      publicPath: '/'
     },
   }
 };

@@ -11,7 +11,7 @@ import List.Nonempty as NE exposing (Nonempty(..))
 import Maybe exposing (Maybe(..))
 import MiscView exposing (ariaHidden, ariaLabel)
 import Regex as Re
-import Routing exposing (ContentId, Route(..))
+import Routing exposing (ContentId, Roots, Route(..))
 import Time
 import Url
 import Util.List as LU
@@ -24,8 +24,8 @@ loading =
         [ text "Loading..." ]
 
 
-contentView : Time.Zone -> Files -> ContentId -> Maybe String -> List (Html msg)
-contentView zone files contentId query =
+contentView : Time.Zone -> Roots -> Files -> ContentId -> Maybe String -> List (Html msg)
+contentView zone roots files contentId query =
     let
         body =
             case Files.at contentId files of
@@ -37,7 +37,7 @@ contentView zone files contentId query =
                         [ text "Could not find file" ]
 
                 Ok inode ->
-                    renderFiles zone inode contentId query
+                    renderFiles zone roots inode contentId query
 
         fullBreadcrumb =
             NEU.appendToNonEmpty (NE.fromElement "Home") contentId
@@ -67,8 +67,9 @@ contentView zone files contentId query =
             (zippedBreadcrumb
                 |> NE.map
                     (\( item, NE.Nonempty _ path ) ->
-                        Routing.toLink
-                            (ContentRoute path Nothing)
+                        Routing.contentLink
+                            roots
+                            path
                             item
                     )
                 |> NEU.init
@@ -87,12 +88,12 @@ contentView zone files contentId query =
     ]
 
 
-renderFiles : Time.Zone -> Inode -> ContentId -> Maybe String -> Html msg
-renderFiles zone files contentId query =
+renderFiles : Time.Zone -> Routing.Roots -> Inode -> ContentId -> Maybe String -> Html msg
+renderFiles zone roots files contentId query =
     let
         makeHref : String -> Html.Attribute msg
         makeHref name =
-            Routing.toHref (ContentRoute (contentId ++ [ name ]) Maybe.Nothing)
+            Routing.contentRef roots (contentId ++ [ name ])
 
         thisItemName =
             Maybe.withDefault "/" (LU.last contentId)
@@ -198,10 +199,10 @@ renderFiles zone files contentId query =
                 , br [] []
 
                 --, div [ class "buttons" ] [] - for multiple buttons
-                , a [ Routing.contentIdRawHref contentId ]
+                , a [ Routing.rawRef roots contentId ]
                     (if isImage then
                         [ img
-                            [ Attr.src <| Routing.contentIdRawUrl contentId
+                            [ Attr.src <| Routing.rawUrl roots contentId
                             , Attr.alt thisItemName
                             ]
                             []

@@ -1,5 +1,19 @@
-module Routing exposing (Roots, Route(..), contentUrl, create, parseUrl, rawUrl, show)
+module Routing exposing
+    ( ContentId
+    , Roots
+    , Route(..)
+    , contentLink
+    , contentRef
+    , contentUrl
+    , createRoots
+    , parseUrl
+    , rawRef
+    , rawUrl
+    , show
+    )
 
+import Html exposing (Html)
+import Html.Attributes exposing (href)
 import Maybe exposing (Maybe(..))
 import Regex as Re
 import Result exposing (Result(..))
@@ -11,8 +25,10 @@ import Util.Maybe as MaybeU
 import Util.Regex as ReU
 import Util.Result as ResultU
 
+
 type alias ContentId =
     List String
+
 
 type Route
     = ContentRoute Roots ContentId (Maybe String)
@@ -27,6 +43,51 @@ show route =
 
         Fatal msg ->
             "Fatal: " ++ msg
+
+
+rawUrl : Roots -> ContentId -> String
+rawUrl roots contentId =
+    let
+        serverIndex =
+            unwrap roots |> .serverIndex
+    in
+    Url.toString serverIndex
+        ++ Url.Builder.relative contentId []
+
+
+rawRef : Roots -> ContentId -> Html.Attribute msg
+rawRef roots id =
+    href <| rawUrl roots id
+
+
+contentUrl : Roots -> ContentId -> Maybe String -> String
+contentUrl roots contentId query =
+    let
+        webappBase =
+            unwrap roots |> .webapp
+
+        queryParams =
+            case query of
+                Just query_ ->
+                    [ Url.Builder.string "q" query_ ]
+
+                Nothing ->
+                    []
+    in
+    Url.toString webappBase
+        ++ Url.Builder.relative contentId queryParams
+
+
+contentRef : Roots -> ContentId -> Html.Attribute msg
+contentRef roots id =
+    href <| contentUrl roots id Nothing
+
+
+contentLink : Roots -> ContentId -> String -> Html msg
+contentLink roots id text =
+    Html.a
+        [ contentRef roots id ]
+        [ Html.text text ]
 
 
 type Roots
@@ -72,8 +133,8 @@ Illustrative examples:
   - "<http://192.168.0.1/"> and "<https://192.168.0.1/"> will collide
 
 -}
-create : String -> String -> Url -> Result String Roots
-create serverIndexRoot webappRoot visitedUrl =
+createRoots : String -> String -> Url -> Result String Roots
+createRoots serverIndexRoot webappRoot visitedUrl =
     let
         parsedServerIndex =
             parseRoot serverIndexRoot
@@ -85,34 +146,6 @@ create serverIndexRoot webappRoot visitedUrl =
         (createHelper serverIndexRoot webappRoot visitedUrl)
         parsedServerIndex
         parsedWebapp
-
-
-rawUrl : Roots -> ContentId -> String
-rawUrl roots contentId =
-    let
-        serverIndex =
-            unwrap roots |> .serverIndex
-    in
-    Url.toString serverIndex
-        ++ Url.Builder.relative contentId []
-
-
-contentUrl : Roots -> ContentId -> Maybe String -> String
-contentUrl roots contentId query =
-    let
-        webappBase =
-            unwrap roots |> .webapp
-
-        queryParams =
-            case query of
-                Just query_ ->
-                    [ Url.Builder.string "q" query_ ]
-
-                Nothing ->
-                    []
-    in
-    Url.toString webappBase
-        ++ Url.Builder.relative contentId queryParams
 
 
 type alias Roots_ =

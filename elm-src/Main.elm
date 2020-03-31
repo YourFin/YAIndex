@@ -38,19 +38,54 @@ type alias Model =
 -- INIT
 
 
-init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Message )
-init flags url key =
+init : Json.Decode.Value -> Url.Url -> Nav.Key -> ( Model, Cmd Message )
+init flagsVal url key =
     let
+        flagsRes =
+            Flags.decode flagsVal
+
+        roots =
+            case flagsRes of
+                Ok flags ->
+                    Routing.createRoots
+                        flags.serverIndex
+                        flags.webappRoot
+                        url
+
+                Err err ->
+                    Err err
+    in
+    case roots of
+        Ok roots_ ->
+            happyPath roots_ url key
+
+        Err msg ->
+            sadPath msg key
+
+
+happyPath : Routing.Roots -> Url.Url -> Nav.Key -> ( Model, Cmd Message )
+happyPath roots url key =
+    let
+        ( contentId, query ) =
+            -- Admitedly this is /kinda/ a hack,
+            -- but the big thing we're worried about when we return a maybe
+            -- (contentId, query) is that the query is outside the webapp,
+            -- which /should not/ be a problem at the place that served the
+            -- damn webapp.
+            --
+            -- There should probably be a check for that though, as it
+            -- slips through the type system right now.
+            Maybe.withDefault ( [], Nothing ) <|
+                Routing.parseUrl roots url
+
         route =
-            Routing.parseUrl url
+            Routing.ContentRoute roots contentId query
 
         fetchCmd =
-            case route of
-                ContentRoute contentId _ ->
-                    Files.Requests.metadata (GotInputInode contentId) contentId
-
-                PageNotFoundRoute ->
-                    Cmd.none
+            Files.Requests.metadata
+                roots
+                (GotInputInode contentId)
+                contentId
     in
     ( { key = key
       , route = route
@@ -61,6 +96,17 @@ init flags url key =
         [ fetchCmd
         , Task.perform GotZone Time.here
         ]
+    )
+
+
+sadPath : String -> Nav.Key -> ( Model, Cmd msg )
+sadPath msg key =
+    ( { key = key
+      , route = Routing.Fatal msg
+      , files = Files.none
+      , zone = Time.utc
+      }
+    , Cmd.none
     )
 
 
@@ -79,22 +125,27 @@ view model =
     in
     { title = "Browser"
     , body =
-        [ header [] [ MiscView.navbar ] ]
-            ++ mainWrapper
-                (case route of
-                    ContentRoute path query ->
-                        contentView model.zone model.files path query
+        case route of
+            ContentRoute roots path query ->
+                [ header [] [ MiscView.navbar roots ] ]
+                    ++ mainWrapper
+                        (contentView
+                            model.zone
+                            roots
+                            model.files
+                            path
+                            query
+                        )
 
-                    _ ->
-                        MiscView.notFoundView
-                )
+            Fatal msg ->
+                [ h1 [] [ text msg ] ]
     }
 
 
 type Message
     = LinkClicked Browser.UrlRequest
     | GotZone Time.Zone
-    | RouteChanged Route
+    | RouteChanged Url.Url
     | GotInputInode ContentId (Result Http.Error InputInode)
 
 
@@ -104,43 +155,59 @@ type Message
 
 update : Message -> Model -> ( Model, Cmd Message )
 update message model =
+    case model.route of
+        Routing.ContentRoute roots contentId _ ->
+            happyUpdate message model roots contentId
+
+        Routing.Fatal _ ->
+            ( model, Cmd.none )
+
+
+happyUpdate : Message -> Model -> Routing.Roots -> ContentId -> ( Model, Cmd Message )
+happyUpdate message model roots contentId =
     case message of
         LinkClicked urlRequest ->
             case urlRequest of
                 Browser.Internal url ->
-                    if Routing.isElmUrl url then
-                        ( model, Nav.pushUrl model.key (Url.toString url) )
+                    case Routing.parseUrl roots url of
+                        Just ( newContentId, _ ) ->
+                            ( model
+                            , Cmd.batch
+                                [ Nav.pushUrl model.key (Url.toString url)
+                                , Files.Requests.metadata roots (GotInputInode newContentId) newContentId
+                                ]
+                            )
 
-                    else
-                        ( model, Nav.load <| Url.toString url )
+                        Nothing ->
+                            ( model, Nav.load <| Url.toString url )
 
                 Browser.External href ->
                     ( model, Nav.load href )
 
-        RouteChanged route ->
-            ( { model | route = route }
-            , case route of
-                ContentRoute contentId _ ->
-                    Files.Requests.metadata (GotInputInode contentId) contentId
+        RouteChanged url ->
+            case Routing.parseUrl roots url of
+                Just ( newContentId, query ) ->
+                    ( { model | route = Routing.ContentRoute roots newContentId query }
+                    , Cmd.none
+                    )
 
-                _ ->
-                    Cmd.none
-            )
+                Nothing ->
+                    ( model, Nav.load <| Url.toString url )
 
-        GotInputInode contentId result ->
+        GotInputInode inodePath result ->
             case result of
                 Ok (UnexploredFolder x) ->
-                    ( { model | files = Files.insertAt (UnexploredFolder x) contentId model.files }
-                    , Files.Requests.folder (GotInputInode contentId) contentId
+                    ( { model | files = Files.insertAt (UnexploredFolder x) inodePath model.files }
+                    , Files.Requests.folder roots (GotInputInode inodePath) inodePath
                     )
 
                 Ok inode ->
-                    ( { model | files = Files.insertAt inode contentId model.files }
+                    ( { model | files = Files.insertAt inode inodePath model.files }
                     , Cmd.none
                     )
 
                 Err (Http.BadStatus _) ->
-                    ( { model | files = Files.markInaccessable contentId model.files }
+                    ( { model | files = Files.markInaccessable inodePath model.files }
                     , Cmd.none
                     )
 
@@ -164,13 +231,13 @@ subscriptions model =
 -- MAIN
 
 
-main : Program () Model Message
+main : Program Json.Decode.Value Model Message
 main =
     Browser.application
         { init = init
         , view = view
         , update = update
         , subscriptions = subscriptions
-        , onUrlChange = RouteChanged << Routing.parseUrl
+        , onUrlChange = RouteChanged
         , onUrlRequest = LinkClicked
         }

@@ -6,11 +6,11 @@ import Maybe
 import Routing
 
 
-navbar : Html msg
-navbar =
+navbar : Routing.Roots -> Html msg
+navbar roots =
     nav [ class "navbar has-shadow is-primary", role "navigation", ariaLabel "main navigation" ]
         [ div [ class "navbar-brand" ]
-            [ a [ class "navbar-item", Routing.toHref Routing.rootRoute ]
+            [ a [ class "navbar-item", Routing.contentRef roots [] ]
                 [ h1 [] [ strong [] [ text "Browser" ] ] ]
             ]
         ]
