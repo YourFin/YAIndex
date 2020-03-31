@@ -1,255 +1,404 @@
-module Routing exposing (Route(..), contentIdRawHref, contentIdRawUrl, isElmUrl, parseUrl, rootRoute, show, toHref, toLink, toUrlString)
+module Routing exposing (Roots, Route(..), contentUrl, create, parseUrl, rawUrl, show)
 
 import ContentId exposing (ContentId)
-import Html exposing (Html)
-import Html.Attributes
-import List
-import Maybe exposing (Maybe)
+import Maybe exposing (Maybe(..))
 import Regex as Re
-import String
+import Result exposing (Result(..))
 import Url exposing (Url)
 import Url.Builder
-import Url.Parser exposing ((</>), (<?>), Parser, map, oneOf, s, string, top)
-import Url.Parser.Query as Query
+import Url.Parser exposing ((<?>))
+import Url.Parser.Query
+import Util.Maybe as MaybeU
+import Util.Regex as ReU
+import Util.Result as ResultU
 
 
 type Route
-    = ContentRoute ContentId (Maybe String)
-    | PageNotFoundRoute
-
-
-rootRoute : Route
-rootRoute =
-    ContentRoute [] Nothing
-
-
-
-{- Logic for parsing raw urls, might be useful later to parse raw routes and
-   rework content
-
-
-      |> Url.fromString
-      |> Maybe.map .path
-      |> Maybe.map (String.split "/")
-      |> Maybe.map (List.map Url.percentDecode)
-      |> Maybe.andThen
-          -- Checks for any Nothings in the list
-          (List.foldl
-              (\val prevMList ->
-                  case val of
-                      Nothing ->
-                          Nothing
-
-                      Just val_ ->
-                          Maybe.map
-                              ((::) val_)
-                              prevMList
-              )
-              (Just [])
-          )
-      |> Maybe.map (List.filter ((==) ""))
-      |> Maybe.andThen List.tail
--}
-
-
-encodeContentId : ContentId -> String
-encodeContentId id =
-    let
-        reFromStr str =
-            Maybe.withDefault Re.never (Re.fromString str)
-
-        backSlashPat =
-            reFromStr "\\\\"
-
-        forwardSlashPat =
-            reFromStr "/"
-    in
-    id
-        |> List.map (Re.replace backSlashPat (\_ -> "\\\\"))
-        |> List.map (Re.replace forwardSlashPat (\_ -> "\\/"))
-        |> String.join "/"
-
-
-{-| Pulls items off of str and pushes them on to soFar, keeping track of escaping
-and adding new lists where appropriate
-Ends up with a reversed list of reversed strings that need to be flipped afterwards
--}
-splitOnUnescapedPathSepHelper : Bool -> List String -> List Char -> List String
-splitOnUnescapedPathSepHelper escaped soFar str =
-    let
-        curStr =
-            Maybe.withDefault "" <| List.head soFar
-
-        tail =
-            Maybe.withDefault [] <| List.tail soFar
-    in
-    case ( escaped, str ) of
-        ( _, [] ) ->
-            soFar
-
-        ( _, '\\' :: rest ) ->
-            splitOnUnescapedPathSepHelper (not escaped) (String.cons '\\' curStr :: tail) rest
-
-        ( False, '/' :: rest ) ->
-            splitOnUnescapedPathSepHelper False ("" :: soFar) rest
-
-        ( _, char :: rest ) ->
-            splitOnUnescapedPathSepHelper False (String.cons char curStr :: tail) rest
-
-
-splitOnUnescapedPathSep : String -> List String
-splitOnUnescapedPathSep str =
-    let
-        flipped =
-            splitOnUnescapedPathSepHelper
-                False
-                [ "" ]
-                (String.toList str)
-    in
-    flipped
-        |> List.reverse
-        |> List.map String.reverse
-
-
-decodeContentId : String -> ContentId
-decodeContentId input =
-    let
-        reFromStr string =
-            Maybe.withDefault Re.never (Re.fromString string)
-    in
-    input
-        |> splitOnUnescapedPathSep
-        |> List.map (Re.replace (reFromStr "\\\\/") (\_ -> "/"))
-        |> List.map (Re.replace (reFromStr "\\\\\\\\") (\_ -> "\\"))
-        |> List.filter (\item -> not <| item == "")
-
-
-
----- EXPORT
+    = ContentRoute Roots ContentId (Maybe String)
+    | Fatal String
 
 
 show : Route -> String
 show route =
     case route of
-        ContentRoute contentId _ ->
-            "ContentRoute for content: " ++ encodeContentId contentId
+        ContentRoute _ contentId _ ->
+            "ContentRoute for content: " ++ String.join "" contentId
 
-        PageNotFoundRoute ->
-            "PageNotFoundRoute"
-
-
-toUrlString : Route -> String
-toUrlString route =
-    case route of
-        ContentRoute contentId possibleQuery ->
-            Url.Builder.absolute [ "c", (encodeContentId >> Url.percentEncode) contentId ]
-                (case possibleQuery of
-                    Maybe.Just query ->
-                        [ Url.Builder.string "q" query ]
-
-                    Maybe.Nothing ->
-                        []
-                )
-
-        PageNotFoundRoute ->
-            Url.Builder.absolute [ "404" ] []
+        Fatal msg ->
+            "Fatal: " ++ msg
 
 
-toHref : Route -> Html.Attribute msg
-toHref route =
-    Html.Attributes.href (toUrlString route)
+type Roots
+    = Roots Roots_
 
 
-toLink : Route -> String -> Html msg
-toLink route text =
-    Html.a
-        [ Html.Attributes.href (toUrlString route) ]
-        [ Html.text text ]
+{-| Create a Roots. Init-time function.
+Takes as arguments a url string for the server index root, a url string for this
+web-application's root, and Url that the application is actually visiting,
+respectively. The first two arguments can be in the form of a full URI
+(i.e. <https://github.com/>) or an absolute path relative to the current
+authority (i.e. domain), like "/media/browser/". The third should generally be
+from the second argument passed to Main.init.
 
+Note that passing a full Url for the webapp route is not /really/ different from
+passing an absolute path, as all webapp-to-webapp redirects strip out the
+authority anyways. Doing so does, however, help check for collisions while
+testing out this software directly from a administrator's filesystem.
 
-contentIdRawUrl : ContentId -> String
-contentIdRawUrl path =
-    "/raw/" ++ String.join "/" path
+This function, then, does two things: parse the two roots, and check both the
+web-application root and the current url for possible collisions with the given
+server index route.
 
+Collisions:
 
+A collision of two urls is here defined by one url being a "child" of the other.
+Illustrative examples:
 
--- Url.Builder.absolute
---     ([ "raw" ] ++ List.map Url.percentEncode path)
---     []
+  - "/index/raw/" and "/index/" collide
 
+  - "/moo" and "/moo/cow" collide
 
-contentIdRawHref : ContentId -> Html.Attribute msg
-contentIdRawHref path =
-    let
-        link =
-            contentIdRawUrl path
-    in
-    Html.Attributes.href link
+  - "/yaindex" and "/yaindex/" collide
 
+  - "/fan" and "/fantastic" do not collide
 
+  - "/" and ANYTHING will collide
 
---- PARSING
+  - ANYTHING and "/" will collide
 
+  - "<http://batman/"> and "<http://robin/"> will not collide
 
-{-| Returns false if the url should be redirected, despite being to the same
-authority as the webapp. This is done because parsers cannot be written to handle
-arbitrary path segments in elm, i.e. raw/foo/bar/baz.txt, which should, actually
-redirect and not have the parser barf
+  - "<http://192.168.0.1/"> and "<https://192.168.0.1/"> will collide
+
 -}
-isElmUrl : Url -> Bool
-isElmUrl url =
+create : String -> String -> Url -> Result String Roots
+create serverIndexRoot webappRoot visitedUrl =
     let
-        rawPat =
-            Maybe.withDefault Re.never <| Re.fromString "^/raw"
+        parsedServerIndex =
+            parseRoot serverIndexRoot
 
-        requestsPat =
-            Maybe.withDefault Re.never <| Re.fromString "^/requests"
+        parsedWebapp =
+            parseRoot webappRoot
     in
-    not <|
-        List.foldl (\pat -> \state -> Re.contains pat url.path || state)
-            False
-            [ rawPat, requestsPat ]
+    ResultU.andThen2
+        (createHelper serverIndexRoot webappRoot visitedUrl)
+        parsedServerIndex
+        parsedWebapp
 
 
-contentIdParser : Parser (ContentId -> a) a
-contentIdParser =
-    Url.Parser.custom "URLsplit" <|
-        \segment ->
-            segment
-                |> Url.percentDecode
-                |> Maybe.withDefault ""
-                |> decodeContentId
-                |> Just
+rawUrl : Roots -> ContentId -> String
+rawUrl roots contentId =
+    let
+        serverIndex =
+            unwrap roots |> .serverIndex
+    in
+    Url.toString serverIndex
+        ++ Url.Builder.relative contentId []
 
 
-redirQuery : Query.Parser Route
-redirQuery =
-    Query.custom "redir" <|
-        \stringList ->
-            case stringList of
-                [ str ] ->
-                    "http://does-not-matter"
-                        ++ str
-                        |> Url.fromString
-                        |> Maybe.map parseUrl
-                        |> Maybe.withDefault rootRoute
+contentUrl : Roots -> ContentId -> Maybe String -> String
+contentUrl roots contentId query =
+    let
+        webappBase =
+            unwrap roots |> .webapp
 
-                _ ->
-                    rootRoute
+        queryParams =
+            case query of
+                Just query_ ->
+                    [ Url.Builder.string "q" query_ ]
 
-
-matchers : Parser (Route -> a) a
-matchers =
-    oneOf
-        [ map rootRoute top
-        , map (ContentRoute []) (s "c" <?> Query.string "q")
-        , map ContentRoute (s "c" </> contentIdParser <?> Query.string "q")
-        , map PageNotFoundRoute (s "404.html")
-        ]
+                Nothing ->
+                    []
+    in
+    Url.toString webappBase
+        ++ Url.Builder.relative contentId queryParams
 
 
-parseUrl : Url -> Route
-parseUrl url =
-    url
-        |> Url.Parser.parse matchers
-        |> Maybe.withDefault PageNotFoundRoute
+type alias Roots_ =
+    { serverIndex : Root_
+    , webapp : Root_
+    }
+
+
+type alias Root_ =
+    Url
+
+
+
+------------------
+-- Root Parsing --
+------------------
+
+
+parseRoot : String -> Result String ParsedRoot_
+parseRoot str =
+    if ReU.matches "^/" str then
+        parseAbsolute str
+
+    else
+        parseCrossOrigin str
+
+
+type ParsedRoot_
+    = Full Url
+    | Absolute String
+
+
+parseAbsolute : String -> Result String ParsedRoot_
+parseAbsolute str =
+    -- Note that str this is guaranteed to start with a slash
+    "http://does-not-matter.com"
+        ++ str
+        |> Url.fromString
+        |> Result.fromMaybe
+            ("Whoops! I couldn't figure out how to use \""
+                ++ str
+                ++ "\" as an absolute url. Here are some good examples:\n"
+                ++ "   /c/\n"
+                ++ "   /c\n"
+                ++ "   /files/browser/"
+            )
+        |> Result.andThen (checkQueryAndFragments str)
+        -- Note that the url value gets dropped with the always in the next
+        -- line. Everything above this comment is error checking
+        |> Result.map (always <| Absolute str)
+
+
+parseCrossOrigin : String -> Result String ParsedRoot_
+parseCrossOrigin str =
+    str
+        |> Url.fromString
+        |> Result.fromMaybe
+            ("I couldn't figure out how to use \""
+                ++ str
+                ++ "\" as a url. Here are some good examples:\n"
+                ++ "   /c/\n"
+                ++ "   /c\n"
+                ++ "   /files/browser/\n"
+                ++ "   https://files.mydomain.com/\n"
+                ++ "   http://files.mydomain.com:4032/\n"
+                ++ "   http://my-computer/yaindex\n"
+                ++ "   http://mydomain.com/files/browser/\n"
+            )
+        |> Result.andThen (checkQueryAndFragments str)
+        |> Result.map Full
+
+
+checkQueryAndFragments : String -> Url -> Result String Url
+checkQueryAndFragments original url =
+    case ( url.query, url.fragment ) of
+        ( Just query, _ ) ->
+            "\""
+                ++ original
+                ++ "\" contains a query section (like ?name=bob),"
+                ++ " which is not allowed for root urls.\nIn this"
+                ++ " case the query found was:\"?"
+                ++ Maybe.withDefault "" url.query
+                ++ "\". Maybe try removing that?"
+                |> Err
+
+        ( _, Just fragment ) ->
+            "\""
+                ++ original
+                ++ "\" contains a fragment (like #paragraph1), which is not"
+                ++ "allowed for root urls.\n"
+                ++ "In this case the fragment found was: \"#"
+                ++ fragment
+                ++ "\". Maybe try removing that?"
+                |> Err
+
+        ( Nothing, Nothing ) ->
+            Ok url
+
+
+
+------------------------
+-- Collision Checking --
+------------------------
+
+
+createHelper :
+    String
+    -> String
+    -> Url
+    -> ParsedRoot_
+    -> ParsedRoot_
+    -> Result String Roots
+createHelper serverIndexRoot webappRoot visitedUrl parsedServerIndex parsedWebapp =
+    let
+        mergedWebapp =
+            case parsedWebapp of
+                Absolute str ->
+                    { visitedUrl
+                        | path = assertTrailingSlash str
+                        , query = Nothing
+                        , fragment = Nothing
+                    }
+
+                Full url ->
+                    { visitedUrl
+                        | path = assertTrailingSlash url.path
+                        , query = Nothing
+                        , fragment = Nothing
+                    }
+
+        mergedServerIndex =
+            case parsedServerIndex of
+                Absolute str ->
+                    { visitedUrl
+                        | path = assertTrailingSlash str
+                        , query = Nothing
+                        , fragment = Nothing
+                    }
+
+                Full url ->
+                    url
+    in
+    if collides parsedServerIndex parsedWebapp then
+        "The given server index root: \""
+            ++ serverIndexRoot
+            ++ "\" is a child of the given web-application root: \""
+            ++ webappRoot
+            ++ "\" or vice versa, which is likely to cause problems.\n\n"
+            ++ "If you want to serve the webapp from the root of your "
+            ++ "server, consider setting it up under something like"
+            ++ "\"/browse/\", and then 308 redirect \"/\" to \"browse\"."
+            |> Err
+
+    else if
+        collides
+            parsedServerIndex
+            (Full <| visitedUrl)
+    then
+        "The given server index root: \""
+            ++ serverIndexRoot
+            ++ "\" is a child of the url you are visiting: \""
+            ++ Url.toString visitedUrl
+            ++ "\" or vice versa, which is likely to cause problems.\n\n"
+            ++ "If you want to serve the webapp from the root of your "
+            ++ "server, consider setting it up under something like"
+            ++ "\"/browse/\", and then 308 redirect \"/\" to \"browse\"."
+            |> Err
+
+    else
+        Ok <| Roots <| Roots_ mergedServerIndex mergedWebapp
+
+
+collides : ParsedRoot_ -> ParsedRoot_ -> Bool
+collides rawRoute clientRoute =
+    case ( rawRoute, clientRoute ) of
+        ( Full rawUrl_, Full clientUrl ) ->
+            (rawUrl_.host == clientUrl.host)
+                && (rawUrl_.port_ == clientUrl.port_)
+                && collidesHelper
+                    ((List.filter ((/=) "") << String.split "/") rawUrl_.path)
+                    ((List.filter ((/=) "") << String.split "/") clientUrl.path)
+
+        ( Full url, Absolute str ) ->
+            collidesHelper
+                ((List.filter ((/=) "") << String.split "/") url.path)
+                ((List.filter ((/=) "") << String.split "/") str)
+
+        ( Absolute str, Full url ) ->
+            collidesHelper
+                ((List.filter ((/=) "") << String.split "/") str)
+                ((List.filter ((/=) "") << String.split "/") url.path)
+
+        ( Absolute raw, Absolute client ) ->
+            collidesHelper
+                ((List.filter ((/=) "") << String.split "/") raw)
+                ((List.filter ((/=) "") << String.split "/") client)
+
+
+collidesHelper : List String -> List String -> Bool
+collidesHelper raw client =
+    case ( raw, client ) of
+        ( _, [] ) ->
+            True
+
+        ( [], _ ) ->
+            True
+
+        ( rawFst :: rawRst, clientFst :: clientRst ) ->
+            (rawFst == clientFst) && collidesHelper rawRst clientRst
+
+
+assertTrailingSlash : String -> String
+assertTrailingSlash str =
+    if ReU.matches "/$" str then
+        str
+
+    else
+        str ++ "/"
+
+
+unwrap : Roots -> Roots_
+unwrap root =
+    case root of
+        Roots root_ ->
+            root_
+
+
+map : (Roots_ -> Roots_) -> Roots -> Roots
+map f =
+    unwrap >> f >> Roots
+
+
+
+-----------------
+-- Url Parsing --
+-----------------
+
+
+{-| Returns Nothing if the url isn't part of the webapp
+-}
+parseUrl : Roots -> Url -> Maybe ( ContentId, Maybe String )
+parseUrl roots toParse =
+    let
+        webappUrl =
+            unwrap roots |> .webapp
+
+        choppedUrl =
+            withoutBase webappUrl.path toParse.path
+                |> Maybe.map (\pa -> { toParse | path = pa })
+    in
+    case choppedUrl of
+        Nothing ->
+            Nothing
+
+        Just url ->
+            ( String.split "/" url.path
+                |> List.filter ((/=) "")
+                |> List.map Url.percentDecode
+                |> MaybeU.liftList
+            , MaybeU.flatMap <| Url.Parser.parse qParamsParser url
+            )
+                |> (\( a, b ) ->
+                        case a of
+                            Just val ->
+                                Just ( val, b )
+
+                            Nothing ->
+                                Nothing
+                   )
+
+
+qParamsParser : Url.Parser.Parser (Maybe String -> a) a
+qParamsParser =
+    Url.Parser.top <?> Url.Parser.Query.string "q"
+
+
+withoutBase : String -> String -> Maybe String
+withoutBase base toChop =
+    let
+        escaped =
+            ReU.escape base
+
+        pat =
+            ReU.fromPat <| "^" ++ escaped
+    in
+    if Re.contains pat toChop then
+        Just <| Re.replace pat (always "/") toChop
+
+    else
+        Nothing
