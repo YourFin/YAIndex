@@ -21,7 +21,11 @@ Running in ${prod ? "production" : "development"} mode.
     devServer: prod ? {} : {
       hot: true,
       overlay: true,
-      historyApiFallback: true, // Allows serving webapp at all paths
+      historyApiFallback: {
+        rewrites: [
+          { from: /^\/c\//, to: '/index.html' }
+        ]
+      }, // Allows serving webapp at all paths
       //disableHostCheck: true,
     },
     entry: './src/index.js',
