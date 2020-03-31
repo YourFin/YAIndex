@@ -42,12 +42,12 @@ folderDecoder =
         ]
         |> JDecode.list
         |> JDecode.map Dict.fromList
-        |> JDecode.map (ExploredFolder Nothing)
+        |> JDecode.map ExploredFolder
 
 
 folderEntryDecoder : JDecode.Decoder ( String, InputInode )
 folderEntryDecoder =
-    JDecode.map2 (\name mtime -> ( name, UnexploredFolder mtime ))
+    JDecode.map2 (\name mtime -> ( name, UnexploredFolder (Just mtime) ))
         (JDecode.field "name" JDecode.string)
         (JDecode.field "mtime" JDecode.string)
 
@@ -158,7 +158,7 @@ parseMetadata metadata_ =
                     ++ "\"."
 
         Folder ->
-            Ok <| UnexploredFolder ""
+            Ok <| UnexploredFolder Nothing
 
         File name ->
             case

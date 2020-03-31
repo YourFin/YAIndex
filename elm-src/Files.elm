@@ -45,8 +45,8 @@ type InputInode
         , size : Int
         , modified : String
         }
-    | UnexploredFolder String -- TODO: Make this a maybe
-    | ExploredFolder (Maybe String) (Dict String InputInode) -- TODO: remove Maybe
+    | UnexploredFolder (Maybe String)
+    | ExploredFolder (Dict String InputInode)
 
 
 type Inode
@@ -153,11 +153,11 @@ iinodeToFileNode inode =
         InputFile info ->
             File_ info Dict.empty
 
-        ExploredFolder mtime children ->
-            Folder_ mtime <| Dict.map (always iinodeToFileNode) children
+        ExploredFolder children ->
+            Folder_ Nothing <| Dict.map (always iinodeToFileNode) children
 
         UnexploredFolder mtime ->
-            Folder_ (Just mtime) Dict.empty
+            Folder_ mtime Dict.empty
 
 
 fileNodeToInode : FileNode_ -> Result RetrivalError Inode
