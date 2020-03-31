@@ -8,30 +8,21 @@ import List.Nonempty as NE
 import Maybe exposing (Maybe(..))
 
 
-inac : Files -> List String -> Files
-inac files p =
-    markInaccessable p files
+unwrapR : Result x a -> a
+unwrapR res =
+    case res of
+        Ok val ->
+            val
+
+        Err _ ->
+            todo ""
 
 
-ins : Files -> List String -> InputInode -> Files
-ins files p i =
-    insertAt i p files
+unwrapM : Maybe a -> a
+unwrapM m =
+    case m of
+        Just val ->
+            val
 
-
-fi : InputInode
-fi =
-    InputFile
-        { contentType = ContentType.Unknown ""
-        , size = 0
-        , modified = ""
-        }
-
-
-fo : InputInode
-fo =
-    UnexploredFolder ""
-
-
-fol : List ( String, InputInode ) -> InputInode
-fol lst =
-    ExploredFolder Nothing (Dict.fromList lst)
+        Nothing ->
+            todo ""
