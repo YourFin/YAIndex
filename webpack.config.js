@@ -17,7 +17,7 @@ Running in ${prod ? "production" : "development"} mode.
   );
   return {
     mode: prod ? 'production' : 'development',
-    devtool: prod ? '' /* none */ : 'cheap-module-eval-source-map',
+    devtool: prod ? /* none */ '' : 'cheap-module-eval-source-map',
     devServer: prod ? {} : {
       contentBase: './dist',
       hot: true,
