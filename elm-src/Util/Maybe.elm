@@ -12,3 +12,13 @@ liftList input =
 
         (Just head) :: rest ->
             Maybe.map ((::) head) <| liftList rest
+
+
+hasValue : Maybe a -> Bool
+hasValue input =
+    case input of
+        Just _ ->
+            True
+
+        Nothing ->
+            False
