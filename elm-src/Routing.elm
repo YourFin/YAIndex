@@ -1,7 +1,7 @@
 module Routing exposing
     ( ContentId
     , Roots
-    , Route(..)
+    , Route
     , contentLink
     , contentRef
     , contentUrl
@@ -30,19 +30,15 @@ type alias ContentId =
     List String
 
 
-type Route
-    = ContentRoute Roots ContentId (Maybe String)
-    | Fatal String
+type alias Route =
+    { contentId : ContentId
+    , query : Maybe String
+    }
 
 
 show : Route -> String
 show route =
-    case route of
-        ContentRoute _ contentId _ ->
-            "ContentRoute for content: " ++ String.join "" contentId
-
-        Fatal msg ->
-            "Fatal: " ++ msg
+    "ContentRoute for content: " ++ String.join "" route.contentId
 
 
 rawUrl : Roots -> ContentId -> String

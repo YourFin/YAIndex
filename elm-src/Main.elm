@@ -16,7 +16,7 @@ import MiscView
 import Pages.Content as Content exposing (contentView)
 import Platform.Cmd as Cmd
 import Result exposing (Result(..))
-import Routing exposing (ContentId, Route(..))
+import Routing exposing (ContentId, Route)
 import Task
 import Time
 import Url
@@ -26,12 +26,23 @@ import Url
 -- MODEL
 
 
-type alias Model =
+type Model
+    = Happy HappyModel
+    | Sad String
+
+
+type alias HappyModel =
     { key : Nav.Key
     , route : Route
+    , roots : Routing.Roots
     , files : Files
     , zone : Time.Zone
     }
+
+
+happyTuple : ( HappyModel, Cmd msg ) -> ( Model, Cmd msg )
+happyTuple ( happyModel, cmd ) =
+    ( Happy happyModel, cmd )
 
 
 
@@ -60,7 +71,7 @@ init flagsVal url key =
             happyPath roots_ url key
 
         Err msg ->
-            sadPath msg key
+            sadPath msg
 
 
 happyPath : Routing.Roots -> Url.Url -> Nav.Key -> ( Model, Cmd Message )
@@ -79,7 +90,7 @@ happyPath roots url key =
                 Routing.parseUrl roots url
 
         route =
-            Routing.ContentRoute roots contentId query
+            Route contentId query
 
         fetchCmd =
             Files.Requests.metadata
@@ -87,11 +98,13 @@ happyPath roots url key =
                 (GotInputInode contentId)
                 contentId
     in
-    ( { key = key
-      , route = route
-      , files = Files.none
-      , zone = Time.utc
-      }
+    ( Happy
+        { key = key
+        , route = route
+        , roots = roots
+        , files = Files.none
+        , zone = Time.utc
+        }
     , Cmd.batch
         [ fetchCmd
         , Task.perform GotZone Time.here
@@ -99,13 +112,9 @@ happyPath roots url key =
     )
 
 
-sadPath : String -> Nav.Key -> ( Model, Cmd msg )
-sadPath msg key =
-    ( { key = key
-      , route = Routing.Fatal msg
-      , files = Files.none
-      , zone = Time.utc
-      }
+sadPath : String -> ( Model, Cmd msg )
+sadPath msg =
+    ( Sad msg
     , Cmd.none
     )
 
@@ -116,6 +125,18 @@ sadPath msg key =
 
 view : Model -> Document Message
 view model =
+    case model of
+        Happy model_ ->
+            happyView model_
+
+        Sad msg ->
+            { title = "YaIndex: Error"
+            , body = [ h1 [] [ text msg ] ]
+            }
+
+
+happyView : HappyModel -> Document Message
+happyView model =
     let
         route =
             model.route
@@ -125,20 +146,14 @@ view model =
     in
     { title = "Browser"
     , body =
-        case route of
-            ContentRoute roots path query ->
-                [ header [] [ MiscView.navbar roots ] ]
-                    ++ mainWrapper
-                        (contentView
-                            model.zone
-                            roots
-                            model.files
-                            path
-                            query
-                        )
-
-            Fatal msg ->
-                [ h1 [] [ text msg ] ]
+        [ header [] [ MiscView.navbar model.roots ] ]
+            ++ mainWrapper
+                (contentView
+                    model.zone
+                    model.roots
+                    model.files
+                    model.route
+                )
     }
 
 
@@ -155,26 +170,26 @@ type Message
 
 update : Message -> Model -> ( Model, Cmd Message )
 update message model =
-    case model.route of
-        Routing.ContentRoute roots contentId _ ->
-            happyUpdate message model roots contentId
+    case model of
+        Happy model_ ->
+            happyTuple <| happyUpdate message model_
 
-        Routing.Fatal _ ->
+        Sad _ ->
             ( model, Cmd.none )
 
 
-happyUpdate : Message -> Model -> Routing.Roots -> ContentId -> ( Model, Cmd Message )
-happyUpdate message model roots contentId =
+happyUpdate : Message -> HappyModel -> ( HappyModel, Cmd Message )
+happyUpdate message model =
     case message of
         LinkClicked urlRequest ->
             case urlRequest of
                 Browser.Internal url ->
-                    case Routing.parseUrl roots url of
+                    case Routing.parseUrl model.roots url of
                         Just ( newContentId, _ ) ->
                             ( model
                             , Cmd.batch
                                 [ Nav.pushUrl model.key (Url.toString url)
-                                , Files.Requests.metadata roots (GotInputInode newContentId) newContentId
+                                , Files.Requests.metadata model.roots (GotInputInode newContentId) newContentId
                                 ]
                             )
 
@@ -185,9 +200,9 @@ happyUpdate message model roots contentId =
                     ( model, Nav.load href )
 
         RouteChanged url ->
-            case Routing.parseUrl roots url of
+            case Routing.parseUrl model.roots url of
                 Just ( newContentId, query ) ->
-                    ( { model | route = Routing.ContentRoute roots newContentId query }
+                    ( { model | route = Route newContentId query }
                     , Cmd.none
                     )
 
@@ -198,7 +213,7 @@ happyUpdate message model roots contentId =
             case result of
                 Ok (UnexploredFolder x) ->
                     ( { model | files = Files.insertAt (UnexploredFolder x) inodePath model.files }
-                    , Files.Requests.folder roots (GotInputInode inodePath) inodePath
+                    , Files.Requests.folder model.roots (GotInputInode inodePath) inodePath
                     )
 
                 Ok inode ->

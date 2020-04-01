@@ -11,7 +11,7 @@ import List.Nonempty as NE exposing (Nonempty(..))
 import Maybe exposing (Maybe(..))
 import MiscView exposing (ariaHidden, ariaLabel)
 import Regex as Re
-import Routing exposing (ContentId, Roots, Route(..))
+import Routing exposing (ContentId, Roots, Route)
 import Time
 import Url
 import Util.List as LU
@@ -24,11 +24,11 @@ loading =
         [ text "Loading..." ]
 
 
-contentView : Time.Zone -> Roots -> Files -> ContentId -> Maybe String -> List (Html msg)
-contentView zone roots files contentId query =
+contentView : Time.Zone -> Roots -> Files -> Route -> List (Html msg)
+contentView zone roots files route =
     let
         body =
-            case Files.at contentId files of
+            case Files.at route.contentId files of
                 Err Unknown ->
                     loading
 
@@ -37,10 +37,10 @@ contentView zone roots files contentId query =
                         [ text "Could not find file" ]
 
                 Ok inode ->
-                    renderFiles zone roots inode contentId query
+                    renderFiles zone roots inode route
 
         fullBreadcrumb =
-            NEU.appendToNonEmpty (NE.fromElement "Home") contentId
+            NEU.appendToNonEmpty (NE.fromElement "Home") route.contentId
 
         -- [a,b] -> [(a, [a]), (b, [a,b])]
         zipBreadcrumb : Nonempty String -> Nonempty ( String, Nonempty String )
@@ -88,15 +88,15 @@ contentView zone roots files contentId query =
     ]
 
 
-renderFiles : Time.Zone -> Routing.Roots -> Inode -> ContentId -> Maybe String -> Html msg
-renderFiles zone roots files contentId query =
+renderFiles : Time.Zone -> Routing.Roots -> Inode -> Route -> Html msg
+renderFiles zone roots files route =
     let
         makeHref : String -> Html.Attribute msg
         makeHref name =
-            Routing.contentRef roots (contentId ++ [ name ])
+            Routing.contentRef roots (route.contentId ++ [ name ])
 
         thisItemName =
-            Maybe.withDefault "/" (LU.last contentId)
+            Maybe.withDefault "/" (LU.last route.contentId)
 
         isImage =
             [ "\\.jpg$", "\\.jpeg", "\\.png$", "\\.gif$" ]
@@ -199,10 +199,10 @@ renderFiles zone roots files contentId query =
                 , br [] []
 
                 --, div [ class "buttons" ] [] - for multiple buttons
-                , a [ Routing.rawRef roots contentId ]
+                , a [ Routing.rawRef roots route.contentId ]
                     (if isImage then
                         [ img
-                            [ Attr.src <| Routing.rawUrl roots contentId
+                            [ Attr.src <| Routing.rawUrl roots route.contentId
                             , Attr.alt thisItemName
                             ]
                             []
