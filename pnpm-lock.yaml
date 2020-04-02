@@ -7,6 +7,7 @@ devDependencies:
   clean-webpack-plugin: 3.0.0_webpack@4.42.1
   css-loader: 3.4.2_webpack@4.42.1
   elm: 0.19.1-3
+  elm-format: 0.8.3
   elm-hot-webpack-loader: 1.1.6_elm-webpack-loader@6.0.1
   elm-test: 0.19.1-revision2
   elm-webpack-loader: 6.0.1_elm@0.19.1-3
@@ -1782,6 +1783,14 @@ packages:
     dev: true
     resolution:
       integrity: sha512-f4x70okzZbIQl/NSRLkI/+tteV/9WqL98zx+SQ69KbXxmVrmjwsNUPn/gYJJ0sHvEak24cZgHIPegRePAtA/xw==
+  /elm-format/0.8.3:
+    dependencies:
+      binwrap: 0.2.2
+    dev: true
+    hasBin: true
+    requiresBuild: true
+    resolution:
+      integrity: sha512-shXOgfg8F5hDJagP91zJ3QT0PoMbusPfhgEeu3uRofTaN843cFpjZ8qlQip6pFQxtWyQE/P+NMg3vP6lyWI5Mg==
   /elm-hot-webpack-loader/1.1.6_elm-webpack-loader@6.0.1:
     dependencies:
       elm-hot: 1.1.4
@@ -6952,6 +6961,7 @@ specifiers:
   clean-webpack-plugin: ^3.0.0
   css-loader: ^3.4.2
   elm: ^0.19.1-3
+  elm-format: ^0.8.3
   elm-hot-webpack-loader: ^1.1.6
   elm-test: ^0.19.1-revision2
   elm-webpack-loader: ^6.0.1
