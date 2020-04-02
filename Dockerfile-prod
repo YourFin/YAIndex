@@ -59,4 +59,4 @@ RUN chmod -R a+x /test_files/ \
 
 EXPOSE 80
 
-CMD bash /app/.profile.d/heroku-exec.sh && bin/run-prod.sh
+CMD /app/.profile.d/heroku-exec.sh && /opt/yaindex/bin/run-prod.sh
