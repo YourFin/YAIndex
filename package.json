@@ -5,8 +5,8 @@
   "private": true,
   "scripts": {
     "test": "elm-test elm-src/",
-    "dev": "webpack-dev-server --env.prod=false --config --hot",
-    "prod-build": "webpack --env.prod=true --config",
+    "dev": "webpack-dev-server --env.prod=false --hot",
+    "prod-build": "webpack --env.prod=true",
     "lint-fix": "elm-format . --yes ; eslint --fix src",
     "lint": "elm-format . --validate && eslint src",
     "js-lint": "elm-format . --validate && eslint src",
