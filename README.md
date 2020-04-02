@@ -6,7 +6,7 @@ Currently it's set up to only browse the `test_files` directory in the source
 repository , but in the future instructions will be provided for using other
 folders. 
 
-A demo is deployed on heroku, and can be seen [here](https://yaindex-example.herokuapp.com/)
+A demo is deployed on heroku, and can be seen [here](https://yaindex-example.herokuapp.com/c/)
 
 # Setup
 ## Deploying yourself
@@ -19,9 +19,12 @@ TODO, but the gist is that you want to bind mount the folder you want to view to
 
 # How?
 
-Styling is done with [Bulma](https://bulma.io/), and can be found in [app/javascript/styles](./app/javascript/styles)
+Styling is done with [Bulma](https://bulma.io/), and can be found in [src/styles](./src/styles)
 
-The current [production dockerfile](/Dockerfile-prod) includes debugging support for heroku; I'll pull this support by adding a separate dockerfile once this is target at being deployable for arbitrary directories.
+The current [production dockerfile](/Dockerfile-prod) includes debugging support
+for heroku and some other extras in support of that particular deployment; I'll
+pull this support by adding a separate dockerfile once this is target at being
+deployable for arbitrary directories. 
 
 
 # Linting
