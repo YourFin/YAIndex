@@ -227,7 +227,8 @@ happyUpdate message model =
                     )
 
                 Err error ->
-                    Debug.log "Unhandled http error" ( model, Cmd.none )
+                    -- TODO: Don't silently fail here
+                    ( model, Cmd.none )
 
         GotZone zone ->
             ( { model | zone = zone }, Cmd.none )

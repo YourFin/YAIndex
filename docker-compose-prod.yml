@@ -1,13 +1,9 @@
 version: '3'
 services:
-  rails:
+  nginx:
     build:
       context: .
       dockerfile: Dockerfile-prod
-    depends_on:
-      - db
-    command: ./bin/run-prod.sh
     ports:
-      - "3030:3030"
-  db:
-    image: postgres:11
+      - "3030:80"
+    command: /opt/yaindex/bin/run-prod.sh

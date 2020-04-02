@@ -12,7 +12,7 @@ RUN curl -sL https://deb.nodesource.com/setup_13.x | bash - && \
   apt-get install -y nodejs
 
 
-# Install yarn
+# Install pnpm
 RUN npm install --global pnpm
 
 WORKDIR ${APP_PATH}

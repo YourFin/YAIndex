@@ -1,16 +1,39 @@
-FROM ruby:2.6.4
+FROM ubuntu:eoan as builder
 
-ENV RAILS_ON_DOCKER=yes
+ENV APP_PATH=/app
+WORKDIR ${APP_PATH}
 
-# Install nodejs 11
-RUN curl -sL https://deb.nodesource.com/setup_11.x | bash - && \
+RUN apt-get update -y && apt-get install curl -y
+
+# Install nodejs 13
+RUN curl -sL https://deb.nodesource.com/setup_13.x | bash - && \
   apt-get install -y nodejs
 
-# Install yarn
-RUN npm install --global yarn
+# Install pnpm
+RUN npm install --global pnpm
 
-#Install nginx, envsubst, postgres client, tooling for sshing in
-RUN apt-get install -y nginx gettext-base postgresql-client openssh-server python vim
+# Install js dependecies
+COPY package.json ${APP_PATH}/package.json
+COPY pnpm-lock.yaml ${APP_PATH}/pnpm-lock.yaml
+RUN pnpm install --frozen-lockfile
+
+# Copy application files
+COPY . ${APP_PATH}
+
+# Hopefully get around elm's annoying proclivity to not download everything
+RUN bin/elm-install
+
+# Actually compile 
+RUN pnpm run prod-build
+
+#######################
+# Heroku final server #
+#######################
+FROM ubuntu:eoan
+
+#Install nginx, envsubst, tooling for sshing in
+RUN apt-get update -y
+RUN apt-get install -y nginx gettext-base openssh-server python vim curl
 
 # Allow heroku remote debugging
 RUN rm /bin/sh \
@@ -18,43 +41,22 @@ RUN rm /bin/sh \
   && mkdir -p /app/.profile.d
 ADD ./bin/heroku-exec.sh /app/.profile.d/heroku-exec.sh
 
-ENV APP_PATH=/app
-ENV RAILS_ENV=production
-ENV RAILS_SERVE_STATIC_FILES true
-
-# Install gems
-RUN mkdir -p $APP_PATH
-COPY Gemfile ${APP_PATH}/Gemfile
-COPY Gemfile.lock ${APP_PATH}/Gemfile.lock
-WORKDIR ${APP_PATH}
-ENV GEM_PATH=/usr/local/bundle
-RUN bundle install --without development test
-
-COPY package.json ${APP_PATH}/package.json
-COPY yarn.lock ${APP_PATH}/yarn.lock
-RUN yarn install --check-files
+WORKDIR /opt/yaindex
 
 # Configure nginx
 RUN useradd -ms /bin/false nginx
 # Explicitly remove default nginx.conf
 RUN rm /etc/nginx/nginx.conf
 
-# Copy entrypoint
-COPY bin/entrypoint.sh /usr/bin
-RUN chmod +x /usr/bin/entrypoint.sh
-
 # Copy application files
-COPY . ${APP_PATH}
+COPY --from=builder /app/dist dist
+COPY nginx nginx 
+COPY bin bin
+COPY test_files /test_files/
+RUN chmod -R a+x /test_files/ \
+        && chmod -R a+x dist
 
-# Build application files
-# Hopefull get around elm's annoying proclivity to not download everything
-RUN bash -c "yarn run elm make /app/app/javascript/Main.elm --output=/dev/null 2>/dev/null || true"
-RUN bash -c "yarn run elm make /app/app/javascript/Main.elm --output=/dev/null 2>/dev/null || true"
-RUN bash -c "yarn run elm make /app/app/javascript/Main.elm --output=/dev/null 2>/dev/null || true"
-RUN bash -c "yarn run elm make /app/app/javascript/Main.elm --output=/dev/null 2>/dev/null || true"
-RUN SECRET_KEY_BASE=`bin/rake secret` FILES_DIRECTORY="/app/test_files/" bundle exec rake assets:precompile
 
-ENTRYPOINT ["entrypoint.sh"]
 EXPOSE 80
 
-CMD bash /app/.profile.d/heroku-exec.sh && ./bin/run-prod.sh
+CMD bash /app/.profile.d/heroku-exec.sh && bin/run-prod.sh
