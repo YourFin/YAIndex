@@ -17,6 +17,6 @@ jobs:
       - name: Build the Docker images
         run: docker-compose build
       - name: Javascript linting
-        run: docker-compose run rails bin/lint.sh --js
+        run: docker-compose run webpack pnpm run js-lint
       - name: Elm linting
-        run: docker-compose run rails bin/lint.sh --elm
+        run: docker-compose run webpack pnpm run elm-lint

@@ -16,4 +16,4 @@ jobs:
       - name: Build the Docker images
         run: docker-compose build
       - name: Run Elm Tests
-        run: docker-compose run rails bin/test.sh --elm
+        run: docker-compose run webpack pnpm run test

@@ -5,14 +5,14 @@ const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 module.exports = env => {
   let prod = env.prod;
   // Force the user to spell out whether this is a production run or not
-  if (prod !== "false" && prod !== "true") {
-    console.log('Error: Production node environment variable set')
+  if (prod !== 'false' && prod !== 'true') {
+    console.log('Error: Production node environment variable set');
     process.exit(1);
   }
-  prod = env.prod === "true";
+  prod = env.prod === 'true';
   console.log(
     `
-Running in ${prod ? "production" : "development"} mode.
+Running in ${prod ? 'production' : 'development'} mode.
 `
   );
   return {
@@ -48,18 +48,18 @@ Running in ${prod ? "production" : "development"} mode.
           test: /\.elm$/i,
           exclude: [/elm-stuff/, /node_modules/],
           use: [ { loader: 'elm-hot-webpack-loader' },
-                 {
-                   loader: 'elm-webpack-loader',
-                   options: {
-                     cwd: __dirname, // directory with elm.json,
-                                     // which contains actual file locations
-                     maxInstances: 4,
-                     optimize: prod,
-                     verbose: !prod,
-                     debug: !prod,
-                   },
-                 },
-               ],
+            {
+              loader: 'elm-webpack-loader',
+              options: {
+                cwd: __dirname, // directory with elm.json,
+                // which contains actual file locations
+                maxInstances: 4,
+                optimize: prod,
+                verbose: !prod,
+                debug: !prod,
+              },
+            },
+          ],
         },
         { // sass
           test: /\.(scss|sass)$/i,
@@ -95,5 +95,5 @@ Running in ${prod ? "production" : "development"} mode.
       path: path.resolve(__dirname, 'dist'),
       publicPath: '/'
     },
-  }
+  };
 };
