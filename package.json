@@ -4,9 +4,15 @@
   "description": "Yet Another Autoindex",
   "private": true,
   "scripts": {
-    "test": "elm-test",
+    "test": "elm-test elm-src/",
     "dev": "webpack-dev-server --env.prod=false --config webpack.config.js --hot",
-    "prod-build": "webpack --env.prod=true --config webpack.config.js"
+    "prod-build": "webpack --env.prod=true --config webpack.config.js",
+    "lint-fix": "elm-format . --yes ; eslint --fix",
+    "lint": "elm-format . --validate && eslint",
+    "lint-js": "elm-format . --validate && eslint",
+    "lint-js-fix": "elm-format . --validate && eslint --fix",
+    "lint-elm": "elm-format . --validate",
+    "lint-elm-fix": "elm-format . --yes"
   },
   "author": "YourFin",
   "license": "Apache-2.0",
