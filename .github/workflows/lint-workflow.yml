@@ -16,9 +16,7 @@ jobs:
       - uses: actions/checkout@v1
       - name: Build the Docker images
         run: docker-compose build
-      - name: Ruby linting
-        run: docker-compose run rails bin/lint.sh --ruby
       - name: Javascript linting
-        run: docker-compose run rails bin/lint.sh --js
+        run: docker-compose run webpack pnpm run js-lint
       - name: Elm linting
-        run: docker-compose run rails bin/lint.sh --elm
+        run: docker-compose run webpack pnpm run elm-lint
