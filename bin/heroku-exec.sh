@@ -1,6 +1,5 @@
 #!/bin/bash
 # Script to allow heroku remote debugging
-set -eou pipefail
 
 [ -z "$SSH_CLIENT" ] || exit 0
 temp_file="$(mktemp)"
