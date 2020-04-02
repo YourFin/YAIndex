@@ -50,11 +50,11 @@ RUN rm /etc/nginx/nginx.conf
 
 # Copy application files
 COPY --from=builder /app/dist dist
-COPY nginx nginx 
+COPY nginx/nginx.template.conf nginx/nginx.template.conf
 COPY bin bin
 COPY test_files /test_files/
-RUN chmod -R a+x /test_files/ \
-        && chmod -R a+x dist
+RUN chmod -R a+r /test_files/ \
+        && chmod -R a+r dist
 
 
 EXPOSE 80
