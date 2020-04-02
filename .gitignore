@@ -57,10 +57,8 @@ bower.json
 # Ignore node_modules
 node_modules/
 
-# Ignore precompiled javascript packs
-/public/packs
-/public/packs-test
-/public/assets
+# Ignore compiled assets
+/dist
 
 # Ignore yarn files
 /yarn-error.log
@@ -70,7 +68,7 @@ yarn-debug.log*
 # Ignore elm make output
 /index.html
 
-# Ignore uploaded files in development
+# Ignore  files in development
 /storage/*
 !/storage/.keep
 /public/packs
