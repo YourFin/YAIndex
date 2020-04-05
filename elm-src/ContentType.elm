@@ -5,6 +5,7 @@ import Util.Regex as ReU
 
 type ContentType
     = Unknown String
+    | Video Video.Model
     | Image
 
 
