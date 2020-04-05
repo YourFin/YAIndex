@@ -1,5 +1,7 @@
 module ContentType exposing (ContentType(..), parse)
 
+import ContentType.Video as Video
+import Util exposing (flip)
 import Util.Regex as ReU
 
 
@@ -18,12 +20,25 @@ parse : Maybe String -> String -> ContentType
 parse mimeType filename =
     case mimeType of
         Just mimeType_ ->
-            if ReU.matches "$image/" mimeType_ then
+            if ReU.matches "^image/" mimeType_ then
                 Image
+
+            else if ReU.matches "^video/" mimeType_ then
+                Video Video.empty
 
             else
                 Unknown filename
 
         Nothing ->
-            -- TODO: implement filename parsing
-            Unknown filename
+            if isImage filename then
+                Image
+
+            else
+                Unknown filename
+
+
+isImage : String -> Bool
+isImage fname =
+    [ "\\.jpg$", "\\.jpeg", "\\.png$", "\\.gif$" ]
+        |> List.map (flip ReU.matchesNoCase fname)
+        |> List.foldl (||) False

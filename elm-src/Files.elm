@@ -1,5 +1,6 @@
 module Files exposing
-    ( Files
+    ( FileAlias
+    , Files
     , Inode(..)
     , InputInode(..)
     , RetrivalError(..)
@@ -40,22 +41,21 @@ type Files
 
 
 type InputInode
-    = InputFile
-        { contentType : ContentType
-        , size : Int
-        , modified : String
-        }
+    = InputFile FileAlias
     | UnexploredFolder (Maybe String)
     | ExploredFolder (Dict String InputInode)
 
 
 type Inode
-    = File
-        { contentType : ContentType
-        , size : Int
-        , modified : String
-        }
+    = File FileAlias
     | Folder (Maybe String) (Dict String Inode)
+
+
+type alias FileAlias =
+    { contentType : ContentType
+    , size : Int
+    , modified : String
+    }
 
 
 {-| The empty Files object.

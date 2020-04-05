@@ -4,12 +4,14 @@ import DateFormat
 import Dict
 import Files exposing (Files, Inode(..), RetrivalError(..))
 import Filesize
+import FolderView
 import Html exposing (..)
 import Html.Attributes as Attr exposing (class, href, id, style)
 import List
 import List.Nonempty as NE exposing (Nonempty(..))
 import Maybe exposing (Maybe(..))
 import MiscView exposing (ariaHidden, ariaLabel)
+import Pages.File as File
 import Regex as Re
 import Routing exposing (ContentId, Roots, Route)
 import Time
@@ -37,7 +39,7 @@ contentView zone roots files route =
                         [ text "Could not find file" ]
 
                 Ok inode ->
-                    renderFiles zone roots inode route
+                    renderFiles zone roots files inode route
 
         fullBreadcrumb =
             NEU.appendToNonEmpty (NE.fromElement "Home") route.contentId
@@ -88,8 +90,8 @@ contentView zone roots files route =
     ]
 
 
-renderFiles : Time.Zone -> Routing.Roots -> Inode -> Route -> Html msg
-renderFiles zone roots files route =
+renderFiles : Time.Zone -> Routing.Roots -> Files -> Inode -> Route -> Html msg
+renderFiles zone roots files node route =
     let
         makeHref : String -> Html.Attribute msg
         makeHref name =
@@ -97,127 +99,13 @@ renderFiles zone roots files route =
 
         thisItemName =
             Maybe.withDefault "/" (LU.last route.contentId)
-
-        isImage =
-            [ "\\.jpg$", "\\.jpeg", "\\.png$", "\\.gif$" ]
-                |> List.map Re.fromString
-                |> List.map (Maybe.withDefault Re.never)
-                |> List.map (\pat -> Re.contains pat thisItemName)
-                |> List.foldl (||) False
     in
-    case files of
+    case node of
         Folder _ children ->
-            table [ class "table", ariaLabel "List of files" ]
-                [ thead []
-                    [ th [] [ text "File" ]
-                    , th [] [ text "Size" ]
-                    , th [] [ text "Modified" ]
-                    ]
-                , Dict.toList children
-                    |> List.map
-                        (\( name, node ) ->
-                            let
-                                sizeText =
-                                    case node of
-                                        File file ->
-                                            Filesize.format file.size
-
-                                        Folder _ _ ->
-                                            "N/A"
-
-                                modified =
-                                    case node of
-                                        File file ->
-                                            file.modified
-
-                                        Folder mtime _ ->
-                                            Maybe.withDefault "Unknown" mtime
-
-                                icon =
-                                    case node of
-                                        File _ ->
-                                            i [ class "fa fa-file", ariaLabel "File" ] []
-
-                                        Folder _ _ ->
-                                            i [ class "fa fa-folder", ariaLabel "Folder" ] []
-                            in
-                            tr []
-                                [ td []
-                                    [ a [ makeHref name ]
-                                        [ span [ class "icon is-small" ] [ icon ]
-                                        , span [ id "content-table-name" ] [ text name ]
-                                        ]
-                                    ]
-                                , td [] [ text sizeText ]
-                                , td []
-                                    [ text modified
-
-                                    --     (DateFormat.format
-                                    --         [ DateFormat.yearNumber
-                                    --         , DateFormat.text "-"
-                                    --         , DateFormat.monthFixed
-                                    --         , DateFormat.text "-"
-                                    --         , DateFormat.dayOfMonthFixed
-                                    --         , DateFormat.text " "
-                                    --         , DateFormat.hourMilitaryNumber
-                                    --         , DateFormat.text ":"
-                                    --         , DateFormat.minuteFixed
-                                    --         ]
-                                    --         zone
-                                    --         modified
-                                    --     )
-                                    ]
-                                ]
-                        )
-                    |> tbody []
-                ]
+            FolderView.view roots route children
 
         File file ->
-            div [ class "content is-medium" ]
-                [ h1 [ class "title" ]
-                    [ text thisItemName ]
-                , text
-                    ("Last modified: "
-                        -- ++ DateFormat.format
-                        --     [ DateFormat.monthNameAbbreviated
-                        --     , DateFormat.text " "
-                        --     , DateFormat.dayOfMonthSuffix
-                        --     , DateFormat.text ", "
-                        --     , DateFormat.yearNumber
-                        --     , DateFormat.text " "
-                        --     , DateFormat.hourFixed
-                        --     , DateFormat.text ":"
-                        --     , DateFormat.minuteFixed
-                        --     , DateFormat.text " "
-                        --     , DateFormat.amPmLowercase
-                        --     ]
-                        --     zone
-                        ++ file.modified
-                    )
-                , br [] []
-                , text ("Size: " ++ Filesize.format file.size)
-                , br [] []
-
-                --, div [ class "buttons" ] [] - for multiple buttons
-                , a [ Routing.rawRef roots route.contentId ]
-                    (if isImage then
-                        [ img
-                            [ Attr.src <| Routing.rawUrl roots route.contentId
-                            , Attr.alt thisItemName
-                            ]
-                            []
-                        ]
-
-                     else
-                        [ button
-                            [ class "button is-link" ]
-                            [ span [] [ text "Open" ]
-                            , span [ class "icon is-small", ariaHidden ]
-                                [ i [ class "fa fa-chevron-circle-down" ] [] ]
-                            ]
-                        ]
-                    )
-                ]
+            File.view roots files route file
 
 
 

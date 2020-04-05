@@ -61,8 +61,12 @@ update msg model =
 -- VIEW
 
 
-view : Routing.Roots -> ContentId -> Model -> Html Message
+view : Routing.Roots -> ContentId -> Model -> Html msg
 view roots contentId model =
-    Html.video [ Attr.src <| Routing.rawUrl roots contentId ]
+    Html.video
+        [ Attr.src <| Routing.rawUrl roots contentId
+        , Attr.controls True
+        , Attr.preload "auto"
+        ]
         [ Html.text "Could not load video"
         ]
