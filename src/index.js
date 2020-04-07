@@ -10,9 +10,8 @@
 //
 //document.body.appendChild(component());
 
-import {
-  Elm
-} from '../elm-src/Main.elm';
+import {Elm} from '../elm-src/Main.elm';
+import './components/elm-video';
 import './packs/global-styles';
 
 document.addEventListener('DOMContentLoaded', () => {

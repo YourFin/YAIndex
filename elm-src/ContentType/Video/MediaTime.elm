@@ -1,5 +1,6 @@
 module ContentType.Video.MediaTime exposing
     ( MediaTime
+    , attrString
     , decoder
     , encode
     , fromFloat
@@ -34,6 +35,11 @@ toString ctime =
                 ++ String.fromInt (minutes ctime)
                 ++ ":"
                 ++ String.fromInt (seconds ctime)
+
+
+attrString : MediaTime -> String
+attrString (MediaTime time) =
+    String.fromFloat time
 
 
 toHtml : MediaTime -> Html msg

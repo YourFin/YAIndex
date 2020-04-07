@@ -63,10 +63,12 @@ update msg model =
 
 view : Routing.Roots -> ContentId -> Model -> Html msg
 view roots contentId model =
-    Html.video
-        [ Attr.src <| Routing.rawUrl roots contentId
-        , Attr.controls True
-        , Attr.preload "auto"
+    Html.node "elm-video"
+        -- see: src/components/elm-video.js
+        [ Attr.attribute "src" <| Routing.rawUrl roots contentId
+        , Attr.attribute "volume" <| String.fromFloat model.volume
+        , Attr.attribute "current-time" <| MediaTime.attrString model.currentTime
+        , Attr.id "video-player"
         ]
         [ Html.text "Could not load video"
         ]
