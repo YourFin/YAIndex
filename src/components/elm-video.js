@@ -21,13 +21,14 @@ export class ElmVideo extends HTMLElement {
     const vid = document.createElement('video');
     this.videoElement = vid;
 
+    vid.addEventListener('timeupdate', (e) => timeUpdateListener(this, e));
+    vid.addEventListener('volumechange', (e) => volumeUpdateListener(this, e));
+    vid.addEventListener('loadedmetadata', (e) => loadedMetadataListener(this, e));
+
     vid.setAttribute('src', src);
     vid.setAttribute('controls', '');
     vid.setAttribute('preload', 'auto');
     vid.setAttribute('controls', '');
-
-    vid.addEventListener('timeupdate', (e) => timeUpdateListener(this, e));
-    vid.addEventListener('volumechange', (e) => volumeUpdateListener(this, e));
 
     const noVideo = document.createElement('p');
     noVideo.innerText = 'Could not play video :(';
@@ -152,4 +153,14 @@ function volumeUpdateListener(elmVid, _) {
     detail: { volume: elmVid.videoElement.volume }
   });
   elmVid.dispatchEvent(volumeUpdateEvent);
+}
+
+function loadedMetadataListener(elmVid, _) {
+  const duration = parseFloat(elmVid.getAttribute('duration'));
+  if (!isNaN(duration)) {
+    const durationEvent = new CustomEvent('duration-found', {
+      detail: { duration: duration }
+    });
+    elmVid.dispatchEvent(durationEvent);
+  }
 }
