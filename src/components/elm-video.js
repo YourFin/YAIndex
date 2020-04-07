@@ -58,15 +58,12 @@ export class ElmVideo extends HTMLElement {
     return ['src', 'volume', 'current-time'];
   }
   attributeChangedCallback(name, oldVal, newVal) {
-    console.log(`${name}: ${oldVal} -> ${newVal}`);
     if (name === 'src') {
       this.updateSrc(oldVal, newVal);
     } else if (name === 'volume') {
       this.updateVolume(oldVal, newVal);
     } else if (name === 'current-time') {
       this.updateTime(oldVal, newVal);
-    } else {
-      console.log('unknown key');
     }
   }
 
@@ -92,7 +89,6 @@ export class ElmVideo extends HTMLElement {
   }
 
   updateTime(oldTime, newTime) {
-    console.log('updateTime');
     if (!this.videoElement) {
       return;
     }
@@ -103,7 +99,6 @@ export class ElmVideo extends HTMLElement {
     if (oldTime !== newTime) {
       const floatTime = parseFloat(newTime);
       if (!isNaN(floatTime)) {
-        console.log('floatTime');
         this.videoElement.currentTime = floatTime;
       }
     }
