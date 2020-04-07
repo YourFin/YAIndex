@@ -1,3 +1,9 @@
+/// Web component <elm-video/> wrapping html5 video element
+/// Has three relevent attributes: src, volume, and current-time, and fires off
+/// three events: 'time-updated', 'duration-found', and 'volume-updated'
+/// There's some nasty stateful code in here, but this file is entirely
+/// self-contained, and only needs to be interacted with through normal DOM
+/// api's (i.e. attributes, events)
 export class ElmVideo extends HTMLElement {
   constructor() {
     super();
@@ -51,10 +57,10 @@ export class ElmVideo extends HTMLElement {
     // underlying video element.
     this.shouldUpdateUnderlyingVideo = true;
 
-
     this.shadowRoot.appendChild(vid);
   }
 
+  // The attributes that call attributeChangedCallback when changed
   static get observedAttributes() {
     return ['src', 'volume', 'current-time'];
   }
@@ -94,6 +100,9 @@ export class ElmVideo extends HTMLElement {
       return;
     }
     if (!this.shouldUpdateUnderlyingVideo) {
+      // This is a one-off flag and workaround for not being able to pass
+      // multiple arguments nicely here, so we need to "consume" the flag
+      // so future calls will have it off by default.
       this.shouldUpdateUnderlyingVideo = true;
       return;
     }
@@ -126,7 +135,6 @@ export class ElmVideo extends HTMLElement {
     // else: we already have a video element and don't need to do shit
   }
 }
-
 customElements.define('elm-video', ElmVideo);
 
 function timeUpdateListener(elmVid, _) {
