@@ -1,4 +1,4 @@
-module ContentType.Video exposing (Model, Msg, empty, update, view)
+module ContentType.Video exposing (Model, Msg, empty, mergeModels, update, view)
 
 import Array exposing (Array)
 import ContentType.Video.MediaTime as MediaTime exposing (MediaTime)
@@ -8,6 +8,7 @@ import Html.Events as Events
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Routing exposing (ContentId)
+import Util.Maybe as MaybeU
 
 
 
@@ -19,6 +20,30 @@ type alias Model =
     , volume : Float
     , duration : Maybe MediaTime
     , ephemerals : Ephemerals
+    }
+
+
+mergeModels : Model -> Model -> Model
+mergeModels oldModel newModel =
+    { currentTime =
+        if newModel.currentTime == MediaTime.fromFloat 0 then
+            oldModel.currentTime
+
+        else
+            newModel.currentTime
+    , volume =
+        if newModel.volume == 1 then
+            oldModel.volume
+
+        else
+            newModel.volume
+    , duration =
+        if not <| MaybeU.hasValue newModel.duration then
+            oldModel.duration
+
+        else
+            newModel.duration
+    , ephemerals = {}
     }
 
 

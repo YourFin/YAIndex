@@ -1,4 +1,4 @@
-module ContentType exposing (ContentType(..), parse)
+module ContentType exposing (ContentType(..), merge, parse)
 
 import ContentType.Video as Video
 import Util exposing (flip)
@@ -9,6 +9,22 @@ type ContentType
     = Unknown String
     | Video Video.Model
     | Image
+
+
+merge : ContentType -> ContentType -> ContentType
+merge oldType newType =
+    case ( oldType, newType ) of
+        ( Video oldModel, Video newModel ) ->
+            Video <| Video.mergeModels oldModel newModel
+
+        ( Unknown _, Unknown _ ) ->
+            newType
+
+        ( _, Unknown _ ) ->
+            oldType
+
+        ( _, _ ) ->
+            newType
 
 
 

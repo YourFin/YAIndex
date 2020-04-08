@@ -307,8 +307,8 @@ mergeNodes : FileNode_ -> FileNode_ -> FileNode_
 mergeNodes oldNode newNode =
     case ( oldNode, newNode ) of
         --- New File
-        ( File_ _ oldChildren, File_ info newChildren ) ->
-            File_ info <|
+        ( File_ oldInfo oldChildren, File_ newInfo newChildren ) ->
+            File_ (mergeFiles oldInfo newInfo) <|
                 mergeInaccessableTrees
                     -- Seperate recusion branch
                     oldChildren
@@ -497,6 +497,14 @@ mergeInaccessableTrees old new =
                     soFar
     in
     Dict.merge insertSurviving inBoth insertSurviving old new Dict.empty
+
+
+mergeFiles : FileAlias -> FileAlias -> FileAlias
+mergeFiles oldFile newFile =
+    { contentType = ContentType.merge oldFile.contentType newFile.contentType
+    , modified = newFile.modified
+    , size = newFile.size
+    }
 
 
 insertSurviving : String -> FileNode_ -> FileTree_ -> FileTree_
