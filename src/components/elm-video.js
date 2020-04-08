@@ -164,8 +164,8 @@ function volumeUpdateListener(elmVid, _) {
 }
 
 function loadedMetadataListener(elmVid, _) {
-  const duration = parseFloat(elmVid.getAttribute('duration'));
-  if (!isNaN(duration)) {
+  const duration = parseFloat(elmVid.videoElement.duration);
+  if (duration) {
     const durationEvent = new CustomEvent('duration-found', {
       detail: { duration: duration }
     });

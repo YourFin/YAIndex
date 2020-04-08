@@ -96,7 +96,7 @@ view roots contentId model =
         , Attr.attribute "current-time" <| MediaTime.attrString model.currentTime
         , Events.on "time-updated" decodeTimeUpdate
         , Events.on "duration-found" decodeGotLength
-        , Events.on "decodeVolumeChange" decodeVolumeChange
+        , Events.on "volume-updated" decodeVolumeChange
         ]
         []
 
