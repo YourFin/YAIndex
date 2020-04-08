@@ -1,9 +1,10 @@
-module ContentType.Video exposing (..)
+module ContentType.Video exposing (Model, Msg, empty, update, view)
 
 import Array exposing (Array)
 import ContentType.Video.MediaTime as MediaTime exposing (MediaTime)
 import Html exposing (Html)
 import Html.Attributes as Attr
+import Html.Events as Events
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Routing exposing (ContentId)
@@ -38,37 +39,56 @@ type alias Ephemerals =
 -- UPDATE
 
 
-type Message
+type Msg
     = TimeUpdate MediaTime
     | GotLength MediaTime
     | VolumeChanged Float
 
 
-update : Message -> Model -> ( Model, Cmd msg )
+update : Msg -> Model -> Model
 update msg model =
     case msg of
         TimeUpdate time ->
-            ( { model | currentTime = time }, Cmd.none )
+            { model | currentTime = time }
 
         VolumeChanged vol ->
-            ( { model | volume = vol }, Cmd.none )
+            { model | volume = vol }
 
         GotLength length ->
-            ( { model | duration = Just length }, Cmd.none )
+            { model | duration = Just length }
 
 
 
 -- VIEW
 
 
-view : Routing.Roots -> ContentId -> Model -> Html msg
+view : Routing.Roots -> ContentId -> Model -> Html Msg
 view roots contentId model =
     Html.node "elm-video"
         -- see: src/components/elm-video.js
         [ Attr.attribute "src" <| Routing.rawUrl roots contentId
         , Attr.attribute "volume" <| String.fromFloat model.volume
         , Attr.attribute "current-time" <| MediaTime.attrString model.currentTime
-        , Attr.id "video-player"
+        , Events.on "time-updated" decodeTimeUpdate
+        , Events.on "duration-found" decodeGotLength
+        , Events.on "decodeVolumeChange" decodeVolumeChange
         ]
-        [ Html.text "Could not load video"
-        ]
+        []
+
+
+decodeTimeUpdate : Decoder Msg
+decodeTimeUpdate =
+    Decode.map (MediaTime.fromFloat >> TimeUpdate)
+        (Decode.at [ "detail", "time" ] Decode.float)
+
+
+decodeGotLength : Decoder Msg
+decodeGotLength =
+    Decode.map (MediaTime.fromFloat >> GotLength)
+        (Decode.at [ "detail", "duration" ] Decode.float)
+
+
+decodeVolumeChange : Decoder Msg
+decodeVolumeChange =
+    Decode.map VolumeChanged
+        (Decode.at [ "detail", "volume" ] Decode.float)

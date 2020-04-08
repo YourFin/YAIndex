@@ -8,6 +8,7 @@ module Files exposing
     , insertAt
     , markInaccessable
     , none
+    , updateAt
     )
 
 import ContentType exposing (ContentType)
@@ -87,13 +88,24 @@ at contentId files =
     kernel contentId (filesToNode files)
 
 
-{-| Insert an Inode at a given ContentId.
+{-| Insert an InputInode at a given ContentId.
 -}
 insertAt : InputInode -> ContentId -> Files -> Files
 insertAt iinode contentId =
     let
         fileNode =
             iinodeToFileNode iinode
+    in
+    mapNode (insertNode contentId fileNode)
+
+
+{-| Like insert at, but takes an Inode instead of an InputInode
+-}
+updateAt : Inode -> ContentId -> Files -> Files
+updateAt inode contentId =
+    let
+        fileNode =
+            inodeToFileNode inode
     in
     mapNode (insertNode contentId fileNode)
 

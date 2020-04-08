@@ -6,20 +6,24 @@ import Dict
 import Files exposing (Files, Inode(..), InputInode(..))
 import Files.Requests
 import Flags exposing (Flags)
+import FolderView
 import Html exposing (..)
-import Html.Attributes exposing (class, style)
+import Html.Attributes as Attr exposing (class, style)
 import Http
 import Json.Decode
 import List
+import List.Nonempty as NE exposing (Nonempty(..))
 import Maybe
-import MiscView
-import Pages.Content as Content exposing (contentView)
+import MiscView exposing (ariaHidden, ariaLabel)
+import Pages.File
 import Platform.Cmd as Cmd
 import Result exposing (Result(..))
 import Routing exposing (ContentId, Route)
 import Task
 import Time
 import Url
+import Util.List as LU
+import Util.List.Nonempty as NEU
 
 
 
@@ -157,15 +161,105 @@ happyView model =
     }
 
 
+loading : Html msg
+loading =
+    div []
+        [ text "Loading..." ]
+
+
+contentView : Time.Zone -> Routing.Roots -> Files -> Route -> List (Html Message)
+contentView zone roots files route =
+    let
+        body =
+            case Files.at route.contentId files of
+                Err Files.Unknown ->
+                    loading
+
+                Err Files.Inaccessable ->
+                    div [ class "content" ]
+                        [ text "Could not find file" ]
+
+                Ok inode ->
+                    renderFiles zone roots files inode route
+
+        fullBreadcrumb =
+            NEU.appendToNonEmpty (NE.fromElement "Home") route.contentId
+
+        -- [a,b] -> [(a, [a]), (b, [a,b])]
+        zipBreadcrumb : Nonempty String -> Nonempty ( String, Nonempty String )
+        zipBreadcrumb breadcrumb =
+            case breadcrumb of
+                NE.Nonempty head [] ->
+                    NE.Nonempty ( head, NE.fromElement head ) []
+
+                NE.Nonempty head (next :: tail) ->
+                    NE.append
+                        (zipBreadcrumb (Nonempty head (NEU.init (Nonempty next tail))))
+                        (NE.fromElement ( NEU.last breadcrumb, breadcrumb ))
+
+        zippedBreadcrumb =
+            zipBreadcrumb fullBreadcrumb
+
+        breadcrumbContainer item =
+            section [ class "breadcrumb-section section" ]
+                [ nav [ class "breadcrumb is-left is-medium", ariaLabel "breadcrumbs" ] [ item ]
+                ]
+    in
+    [ breadcrumbContainer
+        (ul []
+            (zippedBreadcrumb
+                |> NE.map
+                    (\( item, NE.Nonempty _ path ) ->
+                        Routing.contentLink
+                            roots
+                            path
+                            item
+                    )
+                |> NEU.init
+                |> List.map (\item -> li [] [ item ])
+                |> (\lst ->
+                        lst
+                            ++ [ li [ class "is-active" ]
+                                    [ a [ Attr.href "#" ]
+                                        [ text <| NEU.last fullBreadcrumb ]
+                                    ]
+                               ]
+                   )
+            )
+        )
+    , div [ class "container is-fluid" ] [ body ]
+    ]
+
+
+renderFiles : Time.Zone -> Routing.Roots -> Files -> Inode -> Route -> Html Message
+renderFiles zone roots files node route =
+    let
+        makeHref : String -> Html.Attribute msg
+        makeHref name =
+            Routing.contentRef roots (route.contentId ++ [ name ])
+
+        thisItemName =
+            Maybe.withDefault "/" (LU.last route.contentId)
+    in
+    case node of
+        Folder _ children ->
+            FolderView.view roots route children
+
+        File file ->
+            Html.map (FileMsg route.contentId) <|
+                Pages.File.view roots files route file
+
+
+
+-- UPDATE
+
+
 type Message
     = LinkClicked Browser.UrlRequest
     | GotZone Time.Zone
     | RouteChanged Url.Url
     | GotInputInode ContentId (Result Http.Error InputInode)
-
-
-
--- UPDATE
+    | FileMsg ContentId Pages.File.Msg
 
 
 update : Message -> Model -> ( Model, Cmd Message )
@@ -232,6 +326,21 @@ happyUpdate message model =
 
         GotZone zone ->
             ( { model | zone = zone }, Cmd.none )
+
+        FileMsg contentId msg ->
+            case Files.at model.route.contentId model.files of
+                Ok (File file) ->
+                    ( { model
+                        | files =
+                            Files.updateAt (File <| Pages.File.update file msg)
+                                contentId
+                                model.files
+                      }
+                    , Cmd.none
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
 
 
 

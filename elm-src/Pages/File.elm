@@ -1,6 +1,6 @@
 module Pages.File exposing (..)
 
-import ContentType exposing (ContentType(..))
+import ContentType exposing (ContentType)
 import ContentType.Video as Video
 import Files exposing (FileAlias, Files)
 import Filesize
@@ -11,7 +11,11 @@ import Routing exposing (ContentId, Route)
 import Util.List as LU
 
 
-view : Routing.Roots -> Files -> Route -> FileAlias -> Html msg
+
+-- VIEW
+
+
+view : Routing.Roots -> Files -> Route -> FileAlias -> Html Msg
 view roots files route file =
     div [ class "content is-medium" ]
         [ h1 [ class "title" ]
@@ -40,7 +44,7 @@ view roots files route file =
 
         --, div [ class "buttons" ] [] - for multiple buttons
         , case file.contentType of
-            Image ->
+            ContentType.Image ->
                 a [ Routing.rawRef roots route.contentId ]
                     [ img
                         [ Attr.src <| Routing.rawUrl roots route.contentId
@@ -49,10 +53,11 @@ view roots files route file =
                         []
                     ]
 
-            Video model ->
-                Video.view roots route.contentId model
+            ContentType.Video model ->
+                Html.map VideoMsg <|
+                    Video.view roots route.contentId model
 
-            Unknown _ ->
+            ContentType.Unknown _ ->
                 a [ Routing.rawRef roots route.contentId ]
                     [ button
                         [ class "button is-link" ]
@@ -67,3 +72,24 @@ view roots files route file =
 itemName : ContentId -> String
 itemName contentId =
     Maybe.withDefault "Root" (LU.last contentId)
+
+
+
+-- UPDATE
+
+
+type Msg
+    = VideoMsg Video.Msg
+
+
+update : FileAlias -> Msg -> FileAlias
+update file msg =
+    case ( msg, file.contentType ) of
+        ( VideoMsg videoMsg, ContentType.Video model ) ->
+            { file
+                | contentType =
+                    ContentType.Video <| Video.update videoMsg model
+            }
+
+        ( _, _ ) ->
+            file
